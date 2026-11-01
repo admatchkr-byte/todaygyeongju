@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘, 경주 (오늘의 경주) - 경주의 모든 실시간 정보 플랫폼</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Google Fonts -->
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #faf8f5; color: #2c2522; }
+        .font-batang { font-family: 'Gowun Batang', serif; }
+    </style>
+</head>
+<body class="bg-[#faf8f5] text-[#2c2522] min-h-screen flex flex-col justify-between">
+
+    <!-- 상단 네비게이션 -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</span>
+                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">오늘의 경주</span>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-[#5c534e]">
+                <a href="#events" class="hover:text-[#8c4a32] transition">오늘의 행사</a>
+                <a href="#live" class="hover:text-[#8c4a32] transition">실시간 황리단길</a>
+                <a href="#hotspots" class="hover:text-[#8c4a32] transition">구역별 핫플</a>
+                <a href="#coupons" class="hover:text-[#8c4a32] transition">14선 쿠폰북</a>
+            </nav>
+            <div class="text-xs text-[#8c4a32] font-semibold bg-[#faf3eb] px-3 py-1.5 rounded-lg border border-[#e6d5c3]">
+                todaygyeongju.com
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-grow">
+        
+        <!-- 히어로 섹션 (일러스트 배너) -->
+        <section class="max-w-6xl mx-auto px-4 pt-6 pb-8">
+            <div class="relative rounded-2xl overflow-hidden shadow-xl border border-[#e6d5c3] bg-[#fff5eb]">
+                <img src="hero.png" alt="오늘, 경주 일러스트" class="w-full h-[320px] md:h-[420px] object-cover" onerror="this.src='https://images.unsplash.com/photo-1584811644167-d3d1ab7a66b9?auto=format&fit=crop&w=1200&q=80'">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-6 md:p-10 text-white">
+                    <span class="text-xs md:text-sm tracking-widest text-[#f3d5b5] font-semibold uppercase mb-1">TODAY GYEONGJU PLATFORM</span>
+                    <h1 class="text-2xl md:text-4xl font-bold font-batang mb-2">오늘, 경주에서 가장 특별한 순간</h1>
+                    <p class="text-sm md:text-base text-gray-200">황리단길 실시간 상황부터 오늘 열리는 행사, 검증된 로컬 혜택까지 한눈에 확인하세요.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 실시간 황리단길 위젯 -->
+        <section id="live" class="max-w-6xl mx-auto px-4 mb-10">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#e8e2d8]">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <h2 class="text-lg font-bold font-batang">실시간 황리단길 라이브</h2>
+                    </div>
+                    <span class="text-xs text-gray-400">10분 전 업데이트</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-[#faf8f5] p-4 rounded-xl border border-[#efece6] flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">현재 거리 혼잡도</p>
+                            <p class="text-base font-bold text-[#8c4a32]">약간 여유 🚶‍♂️</p>
+                        </div>
+                        <div class="text-2xl">✨</div>
+                    </div>
+                    <div class="bg-[#faf8f5] p-4 rounded-xl border border-[#efece6] flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">실시간 기온 / 체감</p>
+                            <p class="text-base font-bold text-[#2c2522]">18.5°C (체감 19°C)</p>
+                        </div>
+                        <div class="text-2xl">🌤️</div>
+                    </div>
+                    <div class="bg-[#faf8f5] p-4 rounded-xl border border-[#efece6] flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1">오늘의 산책 추천</p>
+                            <p class="text-base font-bold text-emerald-700">대릉원 돌담길 걷기 좋음</p>
+                        </div>
+                        <div class="text-2xl">🍃</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 오늘의 행사·축제 캘린더 -->
+        <section id="events" class="max-w-6xl mx-auto px-4 mb-12">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">DAILY EVENTS</span>
+                    <h2 class="text-2xl font-bold font-batang mt-1">오늘 경주에서 열리는 행사</h2>
+                </div>
+                <span class="text-sm text-gray-500 hover:text-[#8c4a32] cursor-pointer">전체 일정 보기 &rarr;</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8]">
+                    <div class="h-40 bg-[#f4ebd9] flex items-center justify-center text-gray-400 font-medium">행사 이미지</div>
+                    <div class="p-5">
+                        <span class="text-xs bg-[#8c4a32]/10 text-[#8c4a32] px-2.5 py-1 rounded-md font-semibold">플리마켓</span>
+                        <h3 class="font-bold text-lg mt-2 font-batang">황리단길 공예 아트 마켓</h3>
+                        <p class="text-xs text-gray-500 mt-1">📍 황남동 소공원 일대 | 🕒 11:00 ~ 18:00</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8]">
+                    <div class="h-40 bg-[#f4ebd9] flex items-center justify-center text-gray-400 font-medium">행사 이미지</div>
+                    <div class="p-5">
+                        <span class="text-xs bg-emerald-600/10 text-emerald-700 px-2.5 py-1 rounded-md font-semibold">야간개장</span>
+                        <h3 class="font-bold text-lg mt-2 font-batang">동궁과 월지 야간 특별 해설</h3>
+                        <p class="text-xs text-gray-500 mt-1">📍 동궁과 월지 매표소 앞 | 🕒 19:30 시작</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8]">
+                    <div class="h-40 bg-[#f4ebd9] flex items-center justify-center text-gray-400 font-medium">행사 이미지</div>
+                    <div class="p-5">
+                        <span class="text-xs bg-amber-600/10 text-amber-700 px-2.5 py-1 rounded-md font-semibold">전시회</span>
+                        <h3 class="font-bold text-lg mt-2 font-batang">경주 한옥 사진전 '결'</h3>
+                        <p class="text-xs text-gray-500 mt-1">📍 봉황대 근처 갤러리 | 🕒 10:00 ~ 20:00</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 아날로그 쿠폰북 안내 섹션 -->
+        <section id="coupons" class="max-w-6xl mx-auto px-4 mb-16">
+            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 text-center md:text-left flex flex-col md:flex-row items-center justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK</span>
+                    <h2 class="text-2xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집·카페 14선 10% 할인 쿠폰북</h2>
+                    <p class="text-sm text-gray-600 max-w-xl">황남비빔밥, 신라제면, 두낫디스터브, 천마맷돌순두부, 황남빵 등 엄선된 14곳의 매장에서 바로 쓸 수 있는 감성 절취선 쿠폰북 정보를 확인하세요[cite: 10].</p>
+                </div>
+                <div class="mt-6 md:mt-0">
+                    <button class="bg-[#8c4a32] hover:bg-[#733b27] text-white px-6 py-3 rounded-xl font-medium shadow-md transition">
+                        쿠폰북 전체 보기 (14곳)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-[#e8e2d8] py-8 text-center text-xs text-gray-500">
+        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">오늘, 경주 (TODAY GYEONGJU)</p>
+        <p>경주의 모든 실시간 정보와 로컬 이야기를 담는 종합 플랫폼</p>
+        <p class="mt-4 text-gray-400">© 2026 Today Gyeongju. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
