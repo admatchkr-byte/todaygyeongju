@@ -125,18 +125,33 @@
 
         <!-- 아날로그 쿠폰북 안내 섹션 -->
         <section id="coupons" class="max-w-6xl mx-auto px-4 mb-16">
-            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 text-center md:text-left flex flex-col items-center justify-center">
+            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 text-center flex flex-col items-center justify-center">
                 <div class="w-full text-center">
                     <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK</span>
                     <h2 class="text-2xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집·카페 14선 10% 할인 쿠폰북</h2>
                     <p class="text-sm text-gray-600 max-w-xl mx-auto mb-6">황남비빔밥, 신라제면, 두낫디스터브, 천마맷돌순두부 등 엄선된 14곳의 매장에서 바로 쓸 수 있는 감성 절취선 쿠폰북입니다.</p>
                 </div>
                 
-                <!-- 쿠폰 이미지 추가된 부분 -->
-                <div class="w-full mt-4 flex justify-center">
-                    <!-- 쿠폰 이미지 파일명이 coupon.png가 맞는지 확인하세요 -->
+                <!-- 쿠폰북 전용 페이지(coupons.html)로 넘어가는 클릭 영역 -->
+                <a href="coupons.html" class="block w-full mt-4 flex flex-col items-center group cursor-pointer hover:opacity-90 transition">
                     <img src="coupon.png" alt="황리단길 14선 아날로그 쿠폰" class="max-w-full h-auto rounded-xl shadow-lg border border-[#e8e2d8]" onerror="this.src='https://placehold.co/800x400/f4ebd9/8c4a32?text=Coupon+Image+Ready'">
-                </div>
+                    
+                    <button class="mt-8 bg-[#8c4a32] group-hover:bg-[#733b27] text-white px-8 py-3 rounded-xl font-medium shadow-md transition">
+                        쿠폰북 전체 보기 (14곳) &rarr;
+                    </button>
+                </a>
             </div>
         </section>
-        
+
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-[#e8e2d8] py-8 text-center text-xs text-gray-500">
+        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">오늘, 경주 (TODAY GYEONGJU)</p>
+        <p>경주의 모든 실시간 정보와 로컬 이야기를 담는 종합 플랫폼</p>
+        <p class="mt-4 text-gray-400">© 2026 Today Gyeongju. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
+
