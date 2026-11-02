@@ -126,7 +126,7 @@
             </div>
         </section>
 
-        <!-- 아날로그 쿠폰북 안내 섹션 -->
+      <!-- 아날로그 쿠폰북 안내 섹션 -->
         <section id="coupons" class="max-w-6xl mx-auto px-4 mb-16">
             <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 text-center flex flex-col items-center justify-center">
                 <div class="w-full text-center">
@@ -135,14 +135,14 @@
                     <p class="text-sm text-gray-600 max-w-xl mx-auto mb-6">황남비빔밥, 신라제면, 두낫디스터브, 천마맷돌순두부 등 엄선된 14곳의 매장에서 바로 쓸 수 있는 감성 절취선 쿠폰북입니다.</p>
                 </div>
                 
-                <!-- 쿠폰북 전용 페이지(coupons.html)로 넘어가는 클릭 영역 -->
-                <a href="coupons.html" class="block w-full mt-4 flex flex-col items-center group cursor-pointer hover:opacity-90 transition">
+                <!-- 클릭 시 모달창을 띄우도록 수정 -->
+                <div onclick="openCouponModal()" class="block w-full mt-4 flex flex-col items-center group cursor-pointer hover:opacity-90 transition">
                     <img src="coupon.png" alt="황리단길 14선 아날로그 쿠폰" class="max-w-full h-auto rounded-xl shadow-lg border border-[#e8e2d8]" onerror="this.src='https://placehold.co/800x400/f4ebd9/8c4a32?text=Coupon+Image+Ready'">
                     
                     <button class="mt-8 bg-[#8c4a32] group-hover:bg-[#733b27] text-white px-8 py-3 rounded-xl font-medium shadow-md transition">
                         쿠폰북 전체 보기 (14곳) &rarr;
                     </button>
-                </a>
+                </div>
             </div>
         </section>
 
@@ -154,7 +154,70 @@
         <p>경주의 모든 실시간 정보와 로컬 이야기를 담는 종합 플랫폼</p>
         <p class="mt-4 text-gray-400">© 2026 Today Gyeongju. All rights reserved.</p>
     </footer>
+<!-- 쿠폰 모달 팝업창 (기본 상태는 숨김 hidden) -->
+    <div id="couponModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-[#fff5eb] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border-2 border-[#e6d5c3] relative">
+            
+            <!-- 닫기 버튼 -->
+            <button onclick="closeCouponModal()" class="absolute top-4 right-4 text-gray-500 hover:text-black z-10 p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
+            <!-- 팝업창 내용 -->
+            <div class="p-8 text-center">
+                <h3 class="font-batang text-2xl font-bold text-[#8c4a32] mb-2">황리단길 14선 쿠폰북</h3>
+                <p class="text-sm text-gray-600 mb-6">사용하실 매장에서 아래 쿠폰과 바코드를 제시해 주세요.</p>
+                
+                <!-- 샘플 쿠폰 카드 1 -->
+                <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-lg p-6 mb-4 relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-left">
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">No. HRD-01</span>
+                            <h4 class="font-batang font-bold text-xl mt-2">황남비빔밥</h4>
+                        </div>
+                        <div class="text-right text-[#8c4a32] font-bold text-2xl">
+                            10% OFF
+                        </div>
+                    </div>
+                    <!-- 바코드 가짜 이미지 영역 -->
+                    <div class="w-full h-16 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-2"></div>
+                    <button class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2 rounded-lg transition border border-[#d2c4b4]">
+                        직원 확인 (사용 처리)
+                    </button>
+                </div>
+                
+                <!-- 샘플 쿠폰 카드 2 -->
+                <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-lg p-6 relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-left">
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">No. HRD-02</span>
+                            <h4 class="font-batang font-bold text-xl mt-2">신라제면</h4>
+                        </div>
+                        <div class="text-right text-[#8c4a32] font-bold text-2xl">
+                            10% OFF
+                        </div>
+                    </div>
+                    <div class="w-full h-16 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-2"></div>
+                    <button class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2 rounded-lg transition border border-[#d2c4b4]">
+                        직원 확인 (사용 처리)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 열고 닫는 스크립트 -->
+    <script>
+        function openCouponModal() {
+            document.getElementById('couponModal').classList.remove('hidden');
+        }
+        function closeCouponModal() {
+            document.getElementById('couponModal').classList.add('hidden');
+        }
+    </script>
 </body>
 </html>
 
