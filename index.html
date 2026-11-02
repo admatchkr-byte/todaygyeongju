@@ -42,10 +42,10 @@
         <section class="max-w-6xl mx-auto px-4 pt-6 pb-8">
             <div class="relative rounded-2xl overflow-hidden shadow-xl border border-[#e6d5c3] bg-[#fff5eb]">
                 
-                <!-- 기존 img 태그를 지우고 아래 video 태그로 교체합니다 -->
-                <video src="hero.mp4" autoplay loop muted playsinline class="w-full h-[320px] md:h-[420px] object-cover"></video>
+                <!-- 높이를 고정하지 않고 영상 원본 비율(16:9)을 유지하도록 w-full aspect-video 로 수정했습니다 -->
+                <video src="hero.mp4" autoplay loop muted playsinline class="w-full aspect-video object-cover"></video>
                 
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-6 md:p-10 text-white">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-10 text-white">
                     <span class="text-xs md:text-sm tracking-widest text-[#f3d5b5] font-semibold uppercase mb-1">TODAY GYEONGJU PLATFORM</span>
                     <h1 class="text-2xl md:text-4xl font-bold font-batang mb-2">오늘, 경주에서 가장 특별한 순간</h1>
                     <p class="text-sm md:text-base text-gray-200">황리단길 실시간 상황부터 오늘 열리는 행사, 검증된 로컬 혜택까지 한눈에 확인하세요.</p>
