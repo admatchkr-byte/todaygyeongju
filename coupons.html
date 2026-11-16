@@ -3,133 +3,1217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>황리단길 14선 할인 쿠폰북 - 오늘, 경주</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
+        rel="stylesheet"
+    >
+
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #faf8f5; color: #2c2522; }
-        .font-batang { font-family: 'Gowun Batang', serif; }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #faf8f5;
+            color: #2c2522;
+        }
+
+        .font-batang {
+            font-family: 'Gowun Batang', serif;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+        }
+
+        .coupon-progress {
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
-<body class="bg-[#faf8f5] text-[#2c2522] min-h-screen flex flex-col justify-between">
+
+<body class="bg-[#faf8f5] min-h-screen flex flex-col">
 
     <!-- 상단 네비게이션 -->
-    <header class="bg-white/85 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-50">
+    <header class="bg-white/85 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-40">
+
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+
             <div class="flex items-center space-x-2">
-                <a href="index.html" class="text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
-                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">쿠폰북 지갑</span>
+
+                <a href="index.html"
+                   class="text-xl font-bold font-batang text-[#8c4a32]">
+                    오늘, 경주
+                </a>
+
+                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">
+                    쿠폰북 지갑
+                </span>
+
             </div>
-            <a href="index.html" class="text-sm font-medium text-[#8c4a32] hover:underline">&larr; 메인으로 돌아가기</a>
+
+            <a href="index.html"
+               class="text-sm font-medium text-[#8c4a32] hover:underline">
+                ← 메인으로 돌아가기
+            </a>
+
         </div>
     </header>
 
-    <!-- 메인 쿠폰 목록 영역 -->
+
+    <!-- 쿠폰 목록 -->
     <main class="max-w-4xl mx-auto px-4 py-10 flex-grow w-full">
+
         <div class="text-center mb-10">
-            <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK (14 STORES)</span>
-            <h1 class="text-3xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집·카페 14선 쿠폰함</h1>
-            <p class="text-sm text-gray-600">매장 직원에게 본 화면의 쿠폰과 바코드를 보여주시면 상시 10% 할인을 받으실 수 있습니다.</p>
-        </div>
 
-        <!-- 14개 쿠폰 그리드 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            <!-- 쿠폰 1: 황남비빔밥 -->
-            <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">No. HRD-01</span>
-                        <span class="text-xl font-bold text-[#8c4a32]">10% OFF</span>
-                    </div>
-                    <h3 class="font-batang font-bold text-xl mb-1">황남비빔밥</h3>
-                    <p class="text-xs text-gray-500 mb-4">향토음식 · 꼬막·육회 비빔밥 전문점</p>
-                </div>
-                <div>
-                    <div class="w-full h-12 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-3"></div>
-                    <button onclick="useCoupon(this)" class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm">
-                        직원 확인 (사용 처리)
-                    </button>
-                </div>
-            </div>
+            <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">
+                ANALOG COUPON BOOK
+            </span>
 
-            <!-- 쿠폰 2: 신라제면 -->
-            <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">No. HRD-02</span>
-                        <span class="text-xl font-bold text-[#8c4a32]">10% OFF</span>
-                    </div>
-                    <h3 class="font-batang font-bold text-xl mb-1">신라제면</h3>
-                    <p class="text-xs text-gray-500 mb-4">칼국수 · 낙지볶음 맛집</p>
-                </div>
-                <div>
-                    <div class="w-full h-12 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-3"></div>
-                    <button onclick="useCoupon(this)" class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm">
-                        직원 확인 (사용 처리)
-                    </button>
-                </div>
-            </div>
+            <h1 class="text-3xl font-bold font-batang mt-1 mb-2">
+                황리단길 대표 맛집·카페 14선 쿠폰함
+            </h1>
 
-            <!-- 쿠폰 3: 두낫디스터브 -->
-            <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">No. HRD-03</span>
-                        <span class="text-xl font-bold text-[#8c4a32]">10% OFF</span>
-                    </div>
-                    <h3 class="font-batang font-bold text-xl mb-1">두낫디스터브</h3>
-                    <p class="text-xs text-gray-500 mb-4">대형 베이커리 오션뷰/한옥 카페</p>
-                </div>
-                <div>
-                    <div class="w-full h-12 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-3"></div>
-                    <button onclick="useCoupon(this)" class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm">
-                        직원 확인 (사용 처리)
-                    </button>
-                </div>
-            </div>
+            <p class="text-sm text-gray-600">
+                황리단길 대표 맛집의 특별한 할인 혜택을 받아보세요.
+            </p>
 
-            <!-- 쿠폰 4: 천마맷돌순두부 -->
-            <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">No. HRD-04</span>
-                        <span class="text-xl font-bold text-[#8c4a32]">10% OFF</span>
-                    </div>
-                    <h3 class="font-batang font-bold text-xl mb-1">천마맷돌순두부</h3>
-                    <p class="text-xs text-gray-500 mb-4">국산콩 전통 순두부 요리</p>
-                </div>
-                <div>
-                    <div class="w-full h-12 bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/84/EAN13.svg')] bg-cover bg-center bg-no-repeat opacity-60 mb-3"></div>
-                    <button onclick="useCoupon(this)" class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm">
-                        직원 확인 (사용 처리)
-                    </button>
-                </div>
-            </div>
-
-            <!-- 쿠폰 5~14번 확장용 안내 박스 -->
-            <div class="md:col-span-2 bg-[#f4ebd9]/40 border border-[#e6d5c3] rounded-2xl p-6 text-center">
-                <p class="text-sm text-gray-700 font-medium">✨ 황남빵, 황남옥수수, 황남쫀드기, 소옥, 온천집 등 나머지 제휴 맛집 쿠폰들도 순차적으로 업데이트됩니다!</p>
-            </div>
+            <p class="text-xs text-[#8c4a32] mt-3 font-semibold">
+                🎟️ 매장별 선착순 50개 한정 쿠폰
+            </p>
 
         </div>
+
+
+        <!-- 쿠폰 목록이 표시되는 영역 -->
+        <div
+            id="couponGrid"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6"
+        ></div>
+
+
+        <!-- 추가 매장 안내 -->
+        <div class="mt-6 bg-[#f4ebd9]/40 border border-[#e6d5c3] rounded-2xl p-6 text-center">
+
+            <p class="text-sm text-gray-700 font-medium">
+                ✨ 황남빵, 황남옥수수, 소옥 등
+                나머지 제휴 맛집 쿠폰들도 순차적으로 업데이트됩니다!
+            </p>
+
+        </div>
+
+        <p id="pageStatus"
+           class="text-center text-xs text-gray-500 mt-5"
+           aria-live="polite">
+            쿠폰 수량을 불러오는 중입니다...
+        </p>
+
     </main>
+
 
     <!-- 푸터 -->
     <footer class="bg-white border-t border-[#e8e2d8] py-8 text-center text-xs text-gray-500">
-        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">오늘, 경주 (TODAY GYEONGJU)</p>
+
+        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">
+            오늘, 경주 (TODAY GYEONGJU)
+        </p>
+
         <p>© 2026 Today Gyeongju. All rights reserved.</p>
+
     </footer>
 
-    <!-- 쿠폰 사용 완료 스크립트 -->
+
+    <!-- 쿠폰 다운로드 팝업 -->
+    <div
+        id="couponModal"
+        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    >
+
+        <div class="bg-[#fffdf9] border-4 border-double border-[#8c4a32] rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+
+            <button
+                onclick="closeModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-[#8c4a32] text-xl font-bold w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                ✕
+            </button>
+
+
+            <div class="text-center">
+
+                <span
+                    id="modalCode"
+                    class="inline-block text-xs font-mono bg-[#f4ebd9] text-[#8c4a32] px-3 py-1 rounded-full border border-[#e6d5c3] mb-3 font-bold">
+                </span>
+
+                <h3
+                    id="modalName"
+                    class="text-2xl font-bold font-batang text-[#2c2522] mb-2">
+                </h3>
+
+                <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl py-3 px-4 mb-4 font-bold text-lg">
+                    🎉 10% 할인 쿠폰
+                </div>
+
+
+                <p id="modalStatus"
+                   class="text-sm text-[#8c4a32] font-semibold mb-4">
+                </p>
+
+
+                <!-- 다운로드할 쿠폰 미리보기 -->
+                <img
+                    id="couponImage"
+                    class="hidden w-full rounded-xl border border-[#d2c4b4] mb-5"
+                    alt="다운로드할 쿠폰 이미지"
+                >
+
+
+                <button
+                    id="saveButton"
+                    onclick="saveCoupon()"
+                    disabled
+                    class="w-full bg-[#8c4a32] hover:bg-[#733b27] text-white py-3.5 rounded-xl font-bold transition text-sm disabled:opacity-50">
+
+                    쿠폰 이미지 저장하기 📥
+
+                </button>
+
+
+                <p class="text-xs text-gray-500 mt-3 leading-relaxed">
+                    아이폰은 공유 메뉴에서 '이미지 저장'을 선택해 주세요.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- JavaScript -->
     <script>
-        function useCoupon(button) {
-            button.innerText = "사용 완료된 쿠폰입니다 ✅";
-            button.classList.remove('bg-[#f4ebd9]', 'hover:bg-[#e6d5c3]', 'text-[#8c4a32]');
-            button.classList.add('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
-            button.disabled = true;
+
+        /*
+        ============================================
+        1. SUPABASE 연결 설정
+        ============================================
+        */
+
+        const SUPABASE_URL =
+            'https://YOUR_PROJECT_REF.supabase.co';
+
+        const SUPABASE_PUBLISHABLE_KEY =
+            'YOUR_SUPABASE_PUBLISHABLE_KEY';
+
+        // 실제 배포한 Edge Function 이름
+        const FUNCTION_NAME = 'smart-function';
+
+
+        /*
+        ============================================
+        2. 매장 정보
+        ============================================
+        */
+
+        const STORES = [
+
+            {
+                code: 'HRD-01',
+                name: '황남비빔밥',
+                category: '향토음식 · 꼬막·육회 비빔밥 전문점',
+                discount: '10% OFF'
+            },
+
+            {
+                code: 'HRD-02',
+                name: '신라제면',
+                category: '칼국수 · 낙지볶음 맛집',
+                discount: '10% OFF'
+            },
+
+            {
+                code: 'HRD-03',
+                name: '두낫디스터브',
+                category: '대형 베이커리 오션뷰/한옥 카페',
+                discount: '10% OFF'
+            },
+
+            {
+                code: 'HRD-04',
+                name: '천마맷돌순두부',
+                category: '국산콩 전통 순두부 요리',
+                discount: '10% OFF'
+            }
+
+        ];
+
+
+        let db = null;
+
+        let couponData = {};
+
+        let currentCoupon = null;
+
+        let currentAsset = null;
+
+        const issuing = new Set();
+
+
+        /*
+        ============================================
+        3. 브라우저 식별번호 생성
+        ============================================
+        */
+
+        function getDeviceId() {
+
+            const key = 'todaygyeongju_device_id';
+
+            let deviceId = localStorage.getItem(key);
+
+            if (!deviceId) {
+
+                deviceId = crypto.randomUUID();
+
+                localStorage.setItem(key, deviceId);
+
+            }
+
+            return deviceId;
+
         }
+
+
+        /*
+        ============================================
+        4. 쿠폰 발급 기록 확인
+        ============================================
+        */
+
+        function getMyCoupon(code) {
+
+            try {
+
+                return JSON.parse(
+                    localStorage.getItem('tg_issued_' + code)
+                );
+
+            } catch {
+
+                return null;
+
+            }
+
+        }
+
+
+        /*
+        ============================================
+        5. 쿠폰 카드 생성
+        ============================================
+        */
+
+        function createCouponCards() {
+
+            const grid = document.getElementById('couponGrid');
+
+            grid.innerHTML = STORES.map(store => `
+
+                <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
+
+                    <div>
+
+                        <div class="flex justify-between items-center mb-3">
+
+                            <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">
+
+                                No. ${store.code}
+
+                            </span>
+
+                            <span class="text-xl font-bold text-[#8c4a32]">
+
+                                ${store.discount}
+
+                            </span>
+
+                        </div>
+
+                        <h3 class="font-batang font-bold text-xl mb-1">
+
+                            ${store.name}
+
+                        </h3>
+
+                        <p class="text-xs text-gray-500 mb-4">
+
+                            ${store.category}
+
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p id="remaining-${store.code}"
+                           class="text-sm font-bold text-[#8c4a32] mb-2">
+
+                            수량 확인 중...
+
+                        </p>
+
+
+                        <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-4">
+
+                            <div
+                                id="progress-${store.code}"
+                                class="coupon-progress h-full bg-[#8c4a32] rounded-full"
+                                style="width:0%">
+                            </div>
+
+                        </div>
+
+
+                        <button
+
+                            id="btn-${store.code}"
+
+                            onclick="downloadCoupon('${store.code}')"
+
+                            disabled
+
+                            class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm disabled:opacity-60">
+
+                            확인 중...
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `).join('');
+
+        }
+
+
+        /*
+        ============================================
+        6. SUPABASE 쿠폰 수량 불러오기
+        ============================================
+        */
+
+        async function loadCoupons() {
+
+            if (!db) return;
+
+            const { data, error } = await db
+
+                .from('coupons')
+
+                .select(
+                    'id, code, total_quantity, issued_quantity, is_active'
+                )
+
+                .in(
+                    'code',
+                    STORES.map(store => store.code)
+                );
+
+
+            if (error) {
+
+                console.error(error);
+
+                document.getElementById('pageStatus').innerText =
+                    '쿠폰 정보를 불러오지 못했습니다.';
+
+                return;
+
+            }
+
+
+            couponData = {};
+
+            data.forEach(coupon => {
+
+                couponData[coupon.code] = coupon;
+
+            });
+
+
+            STORES.forEach(store => {
+
+                updateCouponCard(store.code);
+
+            });
+
+
+            document.getElementById('pageStatus').innerText =
+                '쿠폰 잔여 수량은 자동으로 갱신됩니다.';
+
+        }
+
+
+        /*
+        ============================================
+        7. 쿠폰 잔여 수량 표시
+        ============================================
+        */
+
+        function updateCouponCard(code) {
+
+            const coupon = couponData[code];
+
+            const remainingText =
+                document.getElementById('remaining-' + code);
+
+            const progress =
+                document.getElementById('progress-' + code);
+
+            const button =
+                document.getElementById('btn-' + code);
+
+
+            if (!coupon) {
+
+                remainingText.innerText = '현재 발급할 수 없습니다';
+
+                button.innerText = '발급 준비 중';
+
+                button.disabled = true;
+
+                return;
+
+            }
+
+
+            const remaining = Math.max(
+                0,
+                coupon.total_quantity - coupon.issued_quantity
+            );
+
+            const myCoupon = getMyCoupon(code);
+
+
+            if (remaining > 0) {
+
+                remainingText.innerText =
+                    `🎟️ 선착순 ${remaining}개 남음 / ${coupon.total_quantity}개`;
+
+            } else {
+
+                remainingText.innerText =
+                    '🔒 한정 수량이 모두 소진되었습니다';
+
+            }
+
+
+            const percentage = coupon.total_quantity > 0
+                ? (remaining / coupon.total_quantity) * 100
+                : 0;
+
+            progress.style.width = percentage + '%';
+
+
+            if (issuing.has(code)) {
+
+                button.innerText = '발급 처리 중...';
+
+                button.disabled = true;
+
+            } else if (myCoupon) {
+
+                button.innerText = '내 쿠폰 다시 다운로드 📥';
+
+                button.disabled = false;
+
+            } else if (remaining === 0) {
+
+                button.innerText = '쿠폰 발급 마감 🔒';
+
+                button.disabled = true;
+
+            } else {
+
+                button.innerText = '쿠폰 다운로드 📥';
+
+                button.disabled = false;
+
+            }
+
+        }
+
+
+        /*
+        ============================================
+        8. 쿠폰 다운로드 및 수량 차감
+        ============================================
+        */
+
+        async function downloadCoupon(code) {
+
+            const coupon = couponData[code];
+
+            if (!coupon || issuing.has(code)) return;
+
+
+            // 이전에 발급받은 쿠폰이면 다시 저장
+            const savedCoupon = getMyCoupon(code);
+
+            if (savedCoupon) {
+
+                await showCoupon(code, savedCoupon);
+
+                return;
+
+            }
+
+
+            const remaining =
+                coupon.total_quantity - coupon.issued_quantity;
+
+
+            if (remaining <= 0) {
+
+                alert('쿠폰이 모두 소진되었습니다.');
+
+                await loadCoupons();
+
+                return;
+
+            }
+
+
+            issuing.add(code);
+
+            updateCouponCard(code);
+
+
+            try {
+
+                /*
+                Edge Function을 통해 서버에서
+                수량 확인 및 발급 처리
+                */
+
+                const response = await fetch(
+
+                    `${SUPABASE_URL}/functions/v1/${FUNCTION_NAME}`,
+
+                    {
+                        method: 'POST',
+
+                        headers: {
+
+                            'Content-Type': 'application/json',
+
+                            'apikey': SUPABASE_PUBLISHABLE_KEY
+
+                        },
+
+                        body: JSON.stringify({
+
+                            code: code,
+
+                            device_id: getDeviceId()
+
+                        })
+
+                    }
+
+                );
+
+
+                const result = await response.json();
+
+
+                if (!response.ok || !result.success) {
+
+                    if (result.error === 'SOLD_OUT') {
+
+                        throw new Error('SOLD_OUT');
+
+                    }
+
+                    throw new Error(result.error || 'ISSUE_FAILED');
+
+                }
+
+
+                /*
+                발급 성공한 경우에만
+                브라우저에 쿠폰 기록 저장
+                */
+
+                const issuedCoupon = {
+
+                    id: result.issue_id,
+
+                    coupon_id: result.coupon_id
+
+                };
+
+
+                localStorage.setItem(
+
+                    'tg_issued_' + code,
+
+                    JSON.stringify(issuedCoupon)
+
+                );
+
+
+                /*
+                발급 완료 후 쿠폰 이미지 표시
+                */
+
+                await showCoupon(code, issuedCoupon, true);
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                if (error.message === 'SOLD_OUT') {
+
+                    alert('선착순 쿠폰이 모두 소진되었습니다.');
+
+                } else {
+
+                    alert(
+                        '쿠폰 발급에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+                    );
+
+                }
+
+            } finally {
+
+                issuing.delete(code);
+
+                await loadCoupons();
+
+                updateCouponCard(code);
+
+            }
+
+        }
+
+
+        /*
+        ============================================
+        9. 쿠폰 이미지 생성
+        ============================================
+        */
+
+        async function createCouponImage(code, issuedCoupon) {
+
+            await document.fonts.ready;
+
+            const store = STORES.find(
+                item => item.code === code
+            );
+
+            const canvas = document.createElement('canvas');
+
+            canvas.width = 1080;
+            canvas.height = 1350;
+
+
+            const ctx = canvas.getContext('2d');
+
+
+            // 배경
+            ctx.fillStyle = '#faf8f5';
+
+            ctx.fillRect(0, 0, 1080, 1350);
+
+
+            // 쿠폰 본문
+            ctx.fillStyle = '#ffffff';
+
+            ctx.fillRect(70, 70, 940, 1210);
+
+
+            // 테두리
+            ctx.strokeStyle = '#d2c4b4';
+
+            ctx.lineWidth = 5;
+
+            ctx.setLineDash([15, 10]);
+
+            ctx.strokeRect(70, 70, 940, 1210);
+
+            ctx.setLineDash([]);
+
+
+            // 상단 영역
+            ctx.fillStyle = '#8c4a32';
+
+            ctx.fillRect(70, 70, 940, 230);
+
+
+            ctx.textAlign = 'center';
+
+
+            // 로고
+            ctx.fillStyle = '#ffffff';
+
+            ctx.font = 'bold 70px Pretendard, sans-serif';
+
+            ctx.fillText(
+                '오늘, 경주',
+                540,
+                170
+            );
+
+
+            ctx.font = '28px Pretendard, sans-serif';
+
+            ctx.fillText(
+                'TODAY GYEONGJU COUPON',
+                540,
+                240
+            );
+
+
+            // 쿠폰 제목
+            ctx.fillStyle = '#8c4a32';
+
+            ctx.font = 'bold 43px Pretendard, sans-serif';
+
+            ctx.fillText(
+                '황리단길 할인 쿠폰',
+                540,
+                410
+            );
+
+
+            // 매장명
+            ctx.fillStyle = '#2c2522';
+
+            ctx.font = 'bold 75px Pretendard, sans-serif';
+
+            ctx.fillText(
+                store.name,
+                540,
+                560,
+                850
+            );
+
+
+            // 할인율
+            ctx.fillStyle = '#8c4a32';
+
+            ctx.font = 'bold 145px Pretendard, sans-serif';
+
+            ctx.fillText(
+                store.discount,
+                540,
+                750,
+                850
+            );
+
+
+            // 구분선
+            ctx.strokeStyle = '#d2c4b4';
+
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+
+            ctx.moveTo(150, 830);
+
+            ctx.lineTo(930, 830);
+
+            ctx.stroke();
+
+
+            // 쿠폰 번호
+            ctx.fillStyle = '#555555';
+
+            ctx.font = 'bold 34px monospace';
+
+            ctx.fillText(
+                'COUPON ' + code,
+                540,
+                925
+            );
+
+
+            // 고유 발급 번호
+            ctx.font = '27px Pretendard, sans-serif';
+
+            ctx.fillText(
+                '고유 발급번호',
+                540,
+                1010
+            );
+
+
+            ctx.font = 'bold 32px monospace';
+
+            const issueNumber = issuedCoupon.id;
+
+            ctx.fillText(
+                issueNumber.slice(0, 18),
+                540,
+                1070,
+                850
+            );
+
+            ctx.fillText(
+                issueNumber.slice(18),
+                540,
+                1120,
+                850
+            );
+
+
+            // 하단 안내
+            ctx.font = '28px Pretendard, sans-serif';
+
+            ctx.fillText(
+                '매장 직원에게 쿠폰을 보여주세요.',
+                540,
+                1210,
+                850
+            );
+
+
+            return new Promise((resolve, reject) => {
+
+                canvas.toBlob(blob => {
+
+                    if (!blob) {
+
+                        reject(
+                            new Error('쿠폰 이미지 생성 실패')
+                        );
+
+                        return;
+
+                    }
+
+                    const filename =
+                        `오늘경주_${code}_${issueNumber.slice(0, 8)}.png`;
+
+                    const file = new File(
+
+                        [blob],
+
+                        filename,
+
+                        { type: 'image/png' }
+
+                    );
+
+
+                    resolve({
+
+                        file,
+
+                        filename,
+
+                        url: URL.createObjectURL(blob)
+
+                    });
+
+                }, 'image/png');
+
+            });
+
+        }
+
+
+        /*
+        ============================================
+        10. 발급된 쿠폰 화면 표시
+        ============================================
+        */
+
+        async function showCoupon(code, issuedCoupon, autoDownload = false) {
+
+            const store = STORES.find(
+                item => item.code === code
+            );
+
+
+            currentCoupon = code;
+
+            currentAsset = null;
+
+
+            document.getElementById('modalCode').innerText =
+                code;
+
+            document.getElementById('modalName').innerText =
+                store.name;
+
+
+            document.getElementById('modalStatus').innerText =
+                '쿠폰 이미지를 준비하고 있습니다...';
+
+
+            document.getElementById('couponImage').classList.add(
+                'hidden'
+            );
+
+
+            document.getElementById('saveButton').disabled = true;
+
+
+            const modal = document.getElementById('couponModal');
+
+            modal.classList.remove('hidden');
+
+            modal.classList.add('flex');
+
+
+            try {
+
+                const asset = await createCouponImage(
+                    code,
+                    issuedCoupon
+                );
+
+
+                currentAsset = asset;
+
+
+                const preview =
+                    document.getElementById('couponImage');
+
+
+                preview.src = asset.url;
+
+                preview.classList.remove('hidden');
+
+
+                document.getElementById('saveButton').disabled = false;
+
+
+                if (autoDownload) {
+
+                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+
+                        document.getElementById('modalStatus').innerText =
+                            '🎉 발급 완료! 아래 버튼에서 이미지를 저장해 주세요.';
+
+                    } else {
+
+                        forceDownload(asset);
+
+                        document.getElementById('modalStatus').innerText =
+                            '🎉 쿠폰 발급 완료! 다운로드를 요청했습니다.';
+
+                    }
+
+                } else {
+
+                    document.getElementById('modalStatus').innerText =
+                        '이미 발급받은 쿠폰입니다. 다시 저장할 수 있어요.';
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+                document.getElementById('modalStatus').innerText =
+                    '이미지를 생성하지 못했습니다. 다시 시도해 주세요.';
+
+            }
+
+        }
+
+
+        /*
+        ============================================
+        11. 실제 이미지 다운로드
+        ============================================
+        */
+
+        function forceDownload(asset) {
+
+            const link = document.createElement('a');
+
+            link.href = asset.url;
+
+            link.download = asset.filename;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+        }
+
+
+        /*
+        ============================================
+        12. 모바일 이미지 저장
+        ============================================
+        */
+
+        function saveCoupon() {
+
+            if (!currentAsset) return;
+
+
+            // 모바일 공유 기능 지원 시
+            if (
+
+                navigator.canShare &&
+
+                navigator.canShare({
+                    files: [currentAsset.file]
+                })
+
+            ) {
+
+                navigator.share({
+
+                    files: [currentAsset.file],
+
+                    title: '오늘, 경주 할인 쿠폰'
+
+                }).catch(error => {
+
+                    if (error.name !== 'AbortError') {
+
+                        alert(
+                            '저장 메뉴를 열지 못했습니다. 다시 시도해 주세요.'
+                        );
+
+                    }
+
+                });
+
+            } else {
+
+                forceDownload(currentAsset);
+
+            }
+
+        }
+
+
+        /*
+        ============================================
+        13. 팝업 닫기
+        ============================================
+        */
+
+        function closeModal() {
+
+            document.getElementById('couponModal').classList.add(
+                'hidden'
+            );
+
+            document.getElementById('couponModal').classList.remove(
+                'flex'
+            );
+
+        }
+
+
+        /*
+        ============================================
+        14. 초기 실행
+        ============================================
+        */
+
+        async function init() {
+
+            createCouponCards();
+
+
+            // 연결 정보 미설정 시 안내
+            if (
+
+                SUPABASE_URL.includes('YOUR_PROJECT_REF') ||
+
+                SUPABASE_PUBLISHABLE_KEY.includes('YOUR_')
+
+            ) {
+
+                document.getElementById('pageStatus').innerText =
+                    'Supabase 프로젝트 URL과 공개 키를 설정해 주세요.';
+
+                return;
+
+            }
+
+
+            db = supabase.createClient(
+
+                SUPABASE_URL,
+
+                SUPABASE_PUBLISHABLE_KEY,
+
+                {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                }
+
+            );
+
+
+            // 최초 쿠폰 조회
+            await loadCoupons();
+
+
+            // 15초마다 잔여 수량 갱신
+            setInterval(() => {
+
+                if (!document.hidden) {
+
+                    loadCoupons();
+
+                }
+
+            }, 15000);
+
+
+            // 화면 재진입 시 수량 갱신
+            document.addEventListener(
+                'visibilitychange',
+                () => {
+
+                    if (!document.hidden) {
+
+                        loadCoupons();
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        window.addEventListener(
+            'DOMContentLoaded',
+            init
+        );
+
     </script>
+
 </body>
 </html>
+
