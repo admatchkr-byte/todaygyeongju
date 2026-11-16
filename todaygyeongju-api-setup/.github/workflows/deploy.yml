@@ -1,0 +1,66 @@
+name: 경주 행사 API 갱신 및 사이트 배포
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # 한국시간 매일 00:17 (UTC 전날 15:17); GitHub 스케줄은 지연될 수 있음.
+    - cron: '17 15 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 사이트 소스 받기
+        uses: actions/checkout@v4
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 경주시 공연 축제 전시 API 데이터 수집
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+        run: python scripts/update_events.py
+
+      - name: 정적 사이트 파일 모으기
+        shell: bash
+        run: |
+          mkdir -p _site
+          cp index.html events.json _site/
+          for file in coupons.html hero.mp4 hero.png coupon.png CNAME; do
+            if [[ -f "$file" ]]; then cp "$file" _site/; fi
+          done
+          for dir in css js img images assets; do
+            if [[ -d "$dir" ]]; then cp -R "$dir" _site/; fi
+          done
+
+      - name: GitHub Pages 설정
+        uses: actions/configure-pages@v5
+
+      - name: 배포 파일 올리기
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4
