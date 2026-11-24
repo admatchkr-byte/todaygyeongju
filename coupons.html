@@ -46,7 +46,7 @@
             <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK</span>
             <h1 class="text-3xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집, 카페 할인 쿠폰북</h1>
             <p class="text-sm text-gray-600">경주 엄선된 매장에서 바로 쓸 수 있는 쿠폰북입니다.</p>
-            <p class="text-xs text-[#8c4a32] mt-3 font-semibold">🎟️ 매장별 선착순 한정 수량 쿠폰 (1인 1매)</p>
+            <p class="text-xs text-[#8c4a32] mt-3 font-semibold">🎟️ 제휴 매장 전용 할인 쿠폰 (1인 1매)</p>
         </div>
 
         <!-- 쿠폰 목록이 표시되는 영역 -->
@@ -114,6 +114,8 @@
             return `${dateStr.replace(/-/g, '.')}까지 사용 가능`;
         };
 
+        const hasQuantityLimit = (cp) => cp && cp.total_quantity !== null && cp.total_quantity !== undefined;
+
         function getDeviceId() {
             const key = 'todaygyeongju_device_id';
             let deviceId = localStorage.getItem(key);
@@ -172,7 +174,6 @@
                 return;
             }
 
-            // 변동 사항(수량, 마감일 등)이 있을 때만 화면 다시 그리기
             const signature = JSON.stringify(
                 couponList.map(c => [
                     c.id,
@@ -191,15 +192,18 @@
                 renderCoupons();
             }
 
-            status.innerText = '쿠폰 잔여 수량은 실시간으로 반영됩니다.';
+            status.innerText = '쿠폰 잔여 수량과 유효기간은 실시간으로 반영됩니다.';
 
-            // 다운로드 창이 열려 있는 상태에서 수량 소진/만료 시 창 자동 닫기
             if (currentModalCouponId !== null) {
                 const activeCp = couponList.find(item => item.id === currentModalCouponId);
                 const isActiveExpired = Boolean(activeCp && activeCp.valid_until && getTodayKst() > activeCp.valid_until);
-                const activeRemaining = activeCp ? Math.max(0, (activeCp.total_quantity ?? 50) - (activeCp.issued_quantity ?? 0)) : 0;
+                const activeHasLimit = hasQuantityLimit(activeCp);
+                const activeRemaining = activeHasLimit
+                    ? Math.max(0, Number(activeCp.total_quantity) - (activeCp.issued_quantity ?? 0))
+                    : null;
+                const isActiveSoldOut = activeHasLimit && activeRemaining === 0;
 
-                if (!activeCp || isActiveExpired || (!currentModalJustClaimed && activeRemaining === 0)) {
+                if (!activeCp || isActiveExpired || (!currentModalJustClaimed && isActiveSoldOut)) {
                     closeModal();
                     alert(isActiveExpired ? '유효기간이 만료되어 마감됐습니다.' : '선착순 수량이 모두 소진되어 마감됐습니다.');
                 }
@@ -211,23 +215,26 @@
             const today = getTodayKst();
 
             grid.innerHTML = couponList.map(cp => {
-                const total = cp.total_quantity ?? 50;
+                const hasLimit = hasQuantityLimit(cp);
+                const total = hasLimit ? Number(cp.total_quantity) : null;
                 const issued = cp.issued_quantity ?? 0;
-                const remaining = Math.max(0, total - issued);
-                const percent = total > 0 ? (remaining / total) * 100 : 0;
+                const remaining = hasLimit ? Math.max(0, total - issued) : null;
+                const percent = hasLimit && total > 0 ? (remaining / total) * 100 : 0;
                 const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
-                const isClosed = isExpired || remaining === 0;
+                const isSoldOut = hasLimit && remaining === 0;
+                const isClosed = isExpired || isSoldOut;
                 const myClaim = getMyClaim(cp.id);
                 const isClaiming = claiming.has(cp.id);
                 const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
                 const validText = formatValidUntil(cp.valid_until);
 
-                let badgeText = '선착순 쿠폰';
-                let badgeClass = 'text-emerald-700 bg-emerald-100';
-                let statusText = `🎟️ 선착순 ${remaining}개 남음 / ${total}개`;
+                let badgeText = hasLimit ? '선착순 쿠폰' : (cp.valid_until ? '유효기간 쿠폰' : '상시 쿠폰');
+                let badgeClass = hasLimit ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100';
+                let statusText = hasLimit
+                    ? `🎟️ 선착순 ${remaining}개 남음 / ${total}개`
+                    : (cp.valid_until ? '📅 유효기간 내 사용 가능' : '✨ 상시 사용 가능');
                 let btnText = '쿠폰 받기 📥';
                 let btnDisabled = false;
-                let barWidth = percent;
 
                 if (isClaiming) {
                     btnText = '발급 처리 중...';
@@ -238,14 +245,12 @@
                     statusText = '⏰ 유효기간이 종료되어 마감됐습니다';
                     btnText = '마감됐습니다 🔒';
                     btnDisabled = true;
-                    barWidth = 0;
-                } else if (remaining === 0) {
+                } else if (isSoldOut) {
                     badgeText = '선착순 마감';
                     badgeClass = 'text-rose-700 bg-rose-100';
                     statusText = '🔒 선착순 마감됐습니다';
                     btnText = '마감됐습니다 🔒';
                     btnDisabled = true;
-                    barWidth = 0;
                 } else if (myClaim) {
                     btnText = '내 쿠폰 다시 보기 📥';
                 }
@@ -268,12 +273,14 @@
                         </div>
 
                         <div>
-                            <p class="text-sm font-bold ${isClosed ? 'text-rose-700' : 'text-[#8c4a32]'} mb-2">
+                            <p class="text-sm font-bold ${isClosed ? 'text-rose-700' : 'text-[#8c4a32]'} ${hasLimit ? 'mb-2' : 'mb-4'}">
                                 ${statusText}
                             </p>
-                            <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-4">
-                                <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${barWidth}%"></div>
-                            </div>
+                            ${hasLimit ? `
+                                <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-4">
+                                    <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${isClosed ? 0 : percent}%"></div>
+                                </div>
+                            ` : ''}
                             <button
                                 onclick="handleCouponClick(${cp.id})"
                                 ${btnDisabled ? 'disabled' : ''}
@@ -298,9 +305,7 @@
                 return;
             }
 
-            const total = cp.total_quantity ?? 50;
-            const issued = cp.issued_quantity ?? 0;
-            if (total - issued <= 0) {
+            if (hasQuantityLimit(cp) && (Number(cp.total_quantity) - (cp.issued_quantity ?? 0)) <= 0) {
                 closeModal();
                 alert('선착순 수량이 모두 소진되어 마감됐습니다.');
                 lastCouponSignature = '';
@@ -466,7 +471,7 @@
                 imgEl.classList.remove('hidden');
                 document.getElementById('saveButton').disabled = false;
                 document.getElementById('modalStatus').innerText = isNew
-                    ? '🎉 선착순 쿠폰 발급 완료! 아래 버튼으로 저장하세요.'
+                    ? '🎉 쿠폰 발급 완료! 아래 버튼으로 저장하세요.'
                     : '이미 발급받은 쿠폰입니다. 다시 저장할 수 있어요.';
             } catch (e) {
                 console.error(e);
@@ -490,8 +495,11 @@
 
         function saveCoupon() {
             const activeCp = couponList.find(item => item.id === currentModalCouponId);
-            const activeRemaining = activeCp ? Math.max(0, (activeCp.total_quantity ?? 50) - (activeCp.issued_quantity ?? 0)) : 0;
-            if (!activeCp || (!currentModalJustClaimed && activeRemaining === 0)) {
+            const activeHasLimit = hasQuantityLimit(activeCp);
+            const activeRemaining = activeHasLimit
+                ? Math.max(0, Number(activeCp.total_quantity) - (activeCp.issued_quantity ?? 0))
+                : null;
+            if (!activeCp || (!currentModalJustClaimed && activeHasLimit && activeRemaining === 0)) {
                 closeModal();
                 alert('선착순 수량이 모두 소진되어 마감됐습니다.');
                 return;
