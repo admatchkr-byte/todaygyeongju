@@ -281,19 +281,23 @@
                     const today = getTodayKst();
 
                     container.innerHTML = coupons.slice(0, 6).map(cp => {
-                        const total = cp.total_quantity ?? 50;
+                        const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+                        const total = hasLimit ? Number(cp.total_quantity) : null;
                         const issued = cp.issued_quantity ?? 0;
-                        const remaining = Math.max(0, total - issued);
+                        const remaining = hasLimit ? Math.max(0, total - issued) : null;
                         const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
-                        const isClosed = isExpired || remaining === 0;
+                        const isSoldOut = hasLimit && remaining === 0;
+                        const isClosed = isExpired || isSoldOut;
                         const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
                         const validText = cp.valid_until ? `${cp.valid_until.replace(/-/g, '.')}까지` : '상시 사용';
 
                         const statusBadge = isExpired
                             ? '<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">기간 만료</span>'
-                            : (remaining === 0
+                            : (isSoldOut
                                 ? '<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">선착순 마감</span>'
-                                : `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">선착순 ${remaining}개 남음</span>`);
+                                : (hasLimit
+                                    ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">선착순 ${remaining}개 남음</span>`
+                                    : `<span class="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">${cp.valid_until ? '유효기간 쿠폰' : '상시 쿠폰'}</span>`));
 
                         return `
                             <a href="coupons.html" class="block bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8] hover:shadow-md transition ${isClosed ? 'opacity-75' : ''}">
