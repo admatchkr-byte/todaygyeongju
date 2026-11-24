@@ -130,7 +130,7 @@
             });
         }
 
-        function renderEvents() {
+       function renderEvents() {
             const listEl = document.getElementById('eventList');
             const countEl = document.getElementById('eventCount');
             const filtered = allEvents.filter(ev => matchesCategory(ev, currentFilter));
@@ -152,34 +152,42 @@
                     : '일정 미정';
                 const statusBadge = getStatusBadge(ev.start_date, ev.end_date);
                 const catStyle = getCategoryStyle(ev.category || '축제');
+                const safeImg = ev.image_url && /^https?:\/\//.test(ev.image_url) ? esc(ev.image_url) : '';
 
                 return `
-                    <article class="bg-white border border-[#e8e2d8] rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition">
-                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold px-2.5 py-1 rounded-md ${catStyle}">
-                                    ${esc(ev.category || '행사')}
-                                </span>
-                                ${statusBadge}
+                    <article class="bg-white border border-[#e8e2d8] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col md:flex-row">
+                        ${safeImg ? `
+                            <div class="md:w-48 h-48 md:h-auto shrink-0 bg-[#f4ebd9]">
+                                <img src="${safeImg}" alt="${esc(ev.title)}" class="w-full h-full object-cover">
                             </div>
-                            <span class="text-xs text-gray-500 font-medium">
-                                🕒 ${dateText}
-                            </span>
-                        </div>
-
-                        <h2 class="text-lg md:text-xl font-bold font-batang text-[#2c2522] mb-1.5">
-                            ${esc(ev.title)}
-                        </h2>
-
-                        <p class="text-xs md:text-sm text-gray-500 mb-2">
-                            📍 ${esc(ev.location || '경주시 일원')}
-                        </p>
-
-                        ${ev.description ? `
-                            <p class="text-sm text-gray-600 leading-relaxed pt-2 border-t border-[#f4ebd9] whitespace-pre-line">
-                                ${esc(ev.description)}
-                            </p>
                         ` : ''}
+                        <div class="p-5 md:p-6 flex-1">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold px-2.5 py-1 rounded-md ${catStyle}">
+                                        ${esc(ev.category || '행사')}
+                                    </span>
+                                    ${statusBadge}
+                                </div>
+                                <span class="text-xs text-gray-500 font-medium">
+                                    🕒 ${dateText}
+                                </span>
+                            </div>
+
+                            <h2 class="text-lg md:text-xl font-bold font-batang text-[#2c2522] mb-1.5">
+                                ${esc(ev.title)}
+                            </h2>
+
+                            <p class="text-xs md:text-sm text-gray-500 mb-2">
+                                📍 ${esc(ev.location || '경주시 일원')}
+                            </p>
+
+                            ${ev.description ? `
+                                <p class="text-sm text-gray-600 leading-relaxed pt-2 border-t border-[#f4ebd9] whitespace-pre-line">
+                                    ${esc(ev.description)}
+                                </p>
+                            ` : ''}
+                        </div>
                     </article>
                 `;
             }).join('');
