@@ -13,6 +13,7 @@
         body { font-family: 'Pretendard', sans-serif; background-color: #faf8f5; color: #2c2522; }
         .font-batang { font-family: 'Gowun Batang', serif; }
     </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-[#faf8f5] text-[#2c2522] min-h-screen flex flex-col justify-between">
 
@@ -231,10 +232,10 @@
             } catch (error) {
                 console.log('임시 데이터를 표시합니다.', error);
                 document.getElementById('events-container').innerHTML = `
-                    <div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500 border border-dashed border-[#e6d5c3] rounded-xl bg-[#faf8f5]">
-                        <p class="mb-2">앗! 아직 오늘의 최신 행사 데이터가 수집되지 않았습니다.</p>
-                        <p class="text-xs text-gray-400">매일 밤 12시 깃허브 액션이 경주시 공공데이터를 연동하면 이곳에 진짜 축제가 나타납니다!</p>
-                    </div>
+                   <div id="events-container" class="col-span-1 md:col-span-3 text-center py-10 text-gray-500 border border-dashed border-[#e6d5c3] rounded-xl bg-[#faf8f5]">
+    <p class="mb-2">앗! 아직 오늘의 최신 행사 데이터가 수집되지 않았습니다.</p>
+    <p class="text-xs text-gray-400">매일 밤 12시 깃허브 액션이 경주시 공공데이터를 연동하면 이곳에 진짜 축제가 나타납니다!</p>
+</div>
                 `;
             }
         }
@@ -244,5 +245,77 @@
         setInterval(fetchWeather, 30 * 60 * 1000); // 30분마다 날씨 갱신
         fetchEvents();
     </script>
+<script>
+(() => {
+  const SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const esc = (s = '') =>
+    String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  async function loadMainContent() {
+    // 1. 행사 목록 표시
+    const evBox = document.getElementById('events-container');
+    if (evBox) {
+      const { data: events, error } = await sb
+        .from('events')
+        .select('*')
+        .order('start_date', { ascending: true });
+
+      if (!error && events && events.length > 0) {
+        evBox.style.border = 'none';
+        evBox.style.padding = '0';
+        evBox.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; text-align:left;">
+            ${events.map(ev => `
+              <div style="background:#ffffff; border:1px solid #e6dccf; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(47,38,31,0.04);">
+                <span style="display:inline-block; font-size:12px; font-weight:700; color:#8c5230; background:#f5ebe0; padding:3px 10px; border-radius:99px;">
+                  ${esc(ev.category || '행사')}
+                </span>
+                <h3 style="margin:10px 0 8px; font-size:17px; color:#2f261f; line-height:1.4;">${esc(ev.title)}</h3>
+                <p style="margin:0 0 4px; font-size:13px; color:#7a6c5d;">📅 ${esc(ev.start_date || '일정 미정')} ~ ${esc(ev.end_date || '')}</p>
+                ${ev.location ? `<p style="margin:0 0 8px; font-size:13px; color:#7a6c5d;">📍 ${esc(ev.location)}</p>` : ''}
+                ${ev.description ? `<p style="margin:8px 0 0; font-size:14px; color:#4a3f35; line-height:1.5;">${esc(ev.description)}</p>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+
+    // 2. 쿠폰 목록 표시
+    const cpBox = document.getElementById('coupons-container');
+    if (cpBox) {
+      const { data: coupons, error } = await sb
+        .from('coupons')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && coupons && coupons.length > 0) {
+        cpBox.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:18px; text-align:left; width:100%;">
+            ${coupons.map(cp => `
+              <div style="background:#ffffff; border:1px solid #e6dccf; border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(47,38,31,0.06);">
+                ${cp.image_url ? `<img src="${esc(cp.image_url)}" alt="${esc(cp.store_name)}" style="width:100%; height:180px; object-fit:cover; display:block;">` : ''}
+                <div style="padding:16px;">
+                  <span style="display:inline-block; font-size:12px; font-weight:700; color:#ffffff; background:#8c5230; padding:3px 10px; border-radius:99px; margin-bottom:8px;">
+                    ${esc(cp.discount_info)}
+                  </span>
+                  <h4 style="margin:0 0 6px; font-size:17px; color:#2f261f;">${esc(cp.store_name)}</h4>
+                  ${cp.description ? `<p style="margin:0; font-size:13px; color:#7a6c5d; line-height:1.5;">${esc(cp.description)}</p>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+  }
+
+  loadMainContent();
+})();
+</script>
+
 </body>
 </html>
