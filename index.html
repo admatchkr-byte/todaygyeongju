@@ -138,25 +138,25 @@
         <p class="mt-4 text-gray-400">© 2026 Today Gyeongju. All rights reserved.</p>
     </footer>
 
-    <!-- 자바스크립트 영역: 날씨 & Supabase 행사·쿠폰 연동 -->
+  <!-- 자바스크립트 영역: 날씨 & Supabase 행사 연동 -->
     <script>
         // 1. 날씨 위젯 스크립트
         async function fetchWeather() {
             try {
                 const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.8562&longitude=129.2247&current_weather=true&timezone=Asia%2FSeoul');
                 const data = await response.json();
-                
+
                 const current = data.current_weather;
                 const temp = Math.round(current.temperature);
                 const code = current.weathercode;
-                
+
                 let weatherIcon = '🌤️';
                 let isRaining = false;
-                
+
                 if (code === 0) { weatherIcon = '☀️'; }
                 else if (code >= 1 && code <= 3) { weatherIcon = '⛅'; }
-                else if (code >= 51 && code <= 67 || code >= 80 && code <= 82) { weatherIcon = '🌧️'; isRaining = true; }
-                else if (code >= 71 && code <= 77 || code >= 85) { weatherIcon = '🌨️'; }
+                else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) { weatherIcon = '🌧️'; isRaining = true; }
+                else if ((code >= 71 && code <= 77) || code === 85) { weatherIcon = '🌨️'; }
                 else { weatherIcon = '☁️'; }
 
                 document.getElementById('temp-text').innerText = `${temp}°C`;
@@ -164,7 +164,7 @@
 
                 const hour = new Date().getHours();
                 let recommendation = '';
-                
+
                 if (isRaining) {
                     recommendation = '비 오는 날엔 황남동 감성 카페로☕';
                 } else if (temp < 10) {
@@ -176,22 +176,20 @@
                 } else {
                     recommendation = '대릉원 돌담길 걷기 참 좋은 날🍃';
                 }
-                
+
                 document.getElementById('walk-recommend-text').innerText = recommendation;
-                
+
                 const now = new Date();
                 document.getElementById('update-time').innerText = `${now.getHours()}시 ${now.getMinutes()}분 업데이트 완료`;
-
             } catch (error) {
                 console.error('날씨 정보를 불러오지 못했습니다.', error);
-                document.getElementById('temp-text').innerText = "확인 불가";
+                document.getElementById('temp-text').innerText = '확인 불가';
             }
         }
 
-        // 2. Supabase 행사·쿠폰 연동 스크립트
+        // 2. Supabase 행사 연동 스크립트
         const SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const esc = (s = '') =>
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -201,6 +199,11 @@
             if (!container) return;
 
             try {
+                if (!window.supabase) {
+                    throw new Error('Supabase 라이브러리가 로드되지 않았습니다.');
+                }
+
+                const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 const { data: events, error } = await sb
                     .from('events')
                     .select('*')
@@ -238,14 +241,9 @@
                 container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500">행사 정보를 불러오지 못했습니다.</div>';
             }
         }
-                    </div>
-                `;
-            }
-        }
 
         // 페이지 로드 시 실행
         fetchWeather();
         setInterval(fetchWeather, 30 * 60 * 1000);
         fetchEvents();
-
     </script>
