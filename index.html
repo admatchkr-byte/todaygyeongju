@@ -112,20 +112,19 @@
 
         <!-- 아날로그 쿠폰북 안내 섹션 -->
         <section id="coupons" class="max-w-6xl mx-auto px-4 mb-16">
-            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 md:p-12 text-center flex flex-col items-center justify-center">
                 <div class="w-full text-center">
                     <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK</span>
-                    <h2 class="text-2xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집·카페 14선 10% 할인 쿠폰북</h2>
-                    <p class="text-sm text-gray-600 max-w-xl mx-auto mb-6">황남비빔밥, 신라제면, 두낫디스터브, 천마맷돌순두부 등 엄선된 14곳의 매장에서 바로 쓸 수 있는 감성 절취선 쿠폰북입니다.</p>
+                    <h2 class="text-2xl font-bold font-batang mt-1 mb-2">황리단길 대표 맛집, 카페 할인 쿠폰북</h2>
+                    <p class="text-sm text-gray-600 max-w-xl mx-auto mb-6">경주 엄선된 매장에서 바로 쓸 수 있는 쿠폰북입니다.</p>
                 </div>
-                
-                <a href="coupons.html" class="block w-full mt-4 flex flex-col items-center group cursor-pointer hover:opacity-90 transition">
-                    <div id="coupons-container" class="w-full"></div>
-                    <img src="coupon.png" alt="황리단길 14선 아날로그 쿠폰" class="max-w-full h-auto rounded-xl shadow-lg border border-[#e8e2d8]" onerror="this.src='https://placehold.co/800x400/f4ebd9/8c4a32?text=Coupon+Image+Ready'">
-                    
-                    <button class="mt-8 bg-[#8c4a32] group-hover:bg-[#733b27] text-white px-8 py-3 rounded-xl font-medium shadow-md transition">
-                        쿠폰북 전체 보기 (14곳) &rarr;
-                    </button>
+
+                <a href="coupons.html" class="inline-flex flex-col items-center group cursor-pointer hover:opacity-90 transition">
+                    <img src="coupon.png" alt="황리단길 대표 맛집·카페 할인 쿠폰북" class="max-w-full h-auto rounded-xl shadow-lg border border-[#e8e2d8] mb-6" onerror="this.style.display='none'">
+
+                    <span class="inline-block bg-[#8c4a32] group-hover:bg-[#733b27] text-white px-8 py-3 rounded-xl font-medium shadow-md transition">
+                        쿠폰북 전체 보기 &rarr;
+                    </span>
                 </a>
             </div>
         </section>
@@ -239,29 +238,6 @@
                 container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500">행사 정보를 불러오지 못했습니다.</div>';
             }
         }
-
-        async function fetchMainCoupons() {
-            const cpBox = document.getElementById('coupons-container');
-            if (!cpBox) return;
-
-            const { data: coupons, error } = await sb
-                .from('coupons')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (!error && coupons && coupons.length > 0) {
-                cpBox.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full text-left mt-4">
-                        ${coupons.map(cp => `
-                            <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8]">
-                                ${cp.image_url ? `<img src="${esc(cp.image_url)}" alt="${esc(cp.store_name)}" class="w-full h-40 object-cover">` : ''}
-                                <div class="p-4">
-                                    <span class="inline-block text-xs bg-[#8c4a32] text-white px-2.5 py-0.5 rounded-full font-semibold mb-2">${esc(cp.discount_info)}</span>
-                                    <h4 class="font-bold text-base font-batang text-[#2f261f]">${esc(cp.store_name)}</h4>
-                                    ${cp.description ? `<p class="text-xs text-gray-500 mt-1">${esc(cp.description)}</p>` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
                     </div>
                 `;
             }
@@ -271,5 +247,5 @@
         fetchWeather();
         setInterval(fetchWeather, 30 * 60 * 1000);
         fetchEvents();
-        fetchMainCoupons();
+
     </script>
