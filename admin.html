@@ -55,6 +55,9 @@
       display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
       background: #f3e8dc; color: var(--accent); font-weight: 700; margin-right: 6px;
     }
+    .badge-unlimited {
+      background: #e8f3ec; color: #1f6f43;
+    }
     .badge-expired {
       background: #fde8e8; color: #b91c1c;
     }
@@ -156,7 +159,14 @@
                 <input type="text" id="cp-discount" required placeholder="예: 전 메뉴 10% 할인" />
               </div>
             </div>
-            <div class="row">
+
+            <label>쿠폰 방식 선택 *</label>
+            <select id="cp-type">
+              <option value="limited">선착순 한정수량 쿠폰 (수량 지정)</option>
+              <option value="unlimited">유효기간 / 상시 쿠폰 (수량 무제한)</option>
+            </select>
+
+            <div class="row" id="cp-qty-wrap">
               <div>
                 <label>한정 수량 선택 *</label>
                 <select id="cp-qty-preset">
@@ -172,8 +182,10 @@
                 <input type="number" id="cp-qty" min="1" value="50" required />
               </div>
             </div>
-            <label>유효기간 마감일 (비워두면 상시 사용 가능)</label>
+
+            <label id="cp-valid-label">유효기간 마감일 (선택 · 비워두면 수량 소진 시까지)</label>
             <input type="date" id="cp-valid-until" />
+
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
             <label>쿠폰 이미지 업로드</label>
@@ -223,9 +235,29 @@
       });
     });
 
-    // 한정 수량 선택 연동
+    // 쿠폰 방식(한정수량 / 무제한) 전환
+    const couponTypeSelect = document.getElementById('cp-type');
+    const qtyWrap = document.getElementById('cp-qty-wrap');
     const qtyPreset = document.getElementById('cp-qty-preset');
     const qtyInput = document.getElementById('cp-qty');
+    const validLabel = document.getElementById('cp-valid-label');
+
+    function syncCouponTypeUI() {
+      const isLimited = couponTypeSelect.value === 'limited';
+      qtyWrap.classList.toggle('hidden', !isLimited);
+      qtyInput.disabled = !isLimited;
+      qtyInput.required = isLimited;
+      if (isLimited && (!qtyInput.value || Number(qtyInput.value) < 1)) {
+        qtyPreset.value = '50';
+        qtyInput.value = '50';
+      }
+      validLabel.textContent = isLimited
+        ? '유효기간 마감일 (선택 · 비워두면 수량 소진 시까지)'
+        : '유효기간 마감일 (비워두면 상시 사용 가능)';
+    }
+
+    couponTypeSelect.addEventListener('change', syncCouponTypeUI);
+
     qtyPreset.addEventListener('change', () => {
       if (qtyPreset.value !== 'custom') {
         qtyInput.value = qtyPreset.value;
@@ -259,8 +291,10 @@
       editingCouponId = null;
       editingImageUrl = '';
       document.getElementById('coupon-form').reset();
+      couponTypeSelect.value = 'limited';
       qtyPreset.value = '50';
       qtyInput.value = '50';
+      syncCouponTypeUI();
       document.getElementById('cp-form-title').textContent = '새 쿠폰 등록';
       document.getElementById('cp-submit-btn').textContent = '쿠폰 등록하기';
       document.getElementById('cp-cancel-btn').classList.add('hidden');
@@ -433,11 +467,16 @@
       const today = getTodayKst();
 
       list.innerHTML = data.map(cp => {
-        const total = cp.total_quantity ?? 50;
+        const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+        const total = hasLimit ? Number(cp.total_quantity) : null;
         const issued = cp.issued_quantity ?? 0;
-        const remaining = Math.max(0, total - issued);
+        const remaining = hasLimit ? Math.max(0, total - issued) : null;
         const isExpired = cp.valid_until && today > cp.valid_until;
         const validText = cp.valid_until ? `~ ${cp.valid_until}까지` : '상시 사용';
+
+        const qtyInfo = hasLimit
+          ? `남은 수량: <strong>${remaining}개</strong> / 총 ${total}개`
+          : `수량: <strong>무제한</strong> (발급 ${issued}명)`;
 
         return `
           <div class="item">
@@ -445,11 +484,12 @@
             <div class="item-info">
               <div>
                 <span class="badge">${escapeHtml(cp.discount_info)}</span>
+                ${hasLimit ? '<span class="badge">한정수량</span>' : '<span class="badge badge-unlimited">수량 무제한</span>'}
                 ${isExpired ? `<span class="badge badge-expired">기간 만료</span>` : ''}
                 <strong>${escapeHtml(cp.store_name)}</strong>
               </div>
               <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
-                남은 수량: <strong>${remaining}개</strong> / 총 ${total}개 · 유효기간: <strong>${escapeHtml(validText)}</strong>
+                ${qtyInfo} · 유효기간: <strong>${escapeHtml(validText)}</strong>
               </div>
               ${cp.description ? `<div style="font-size:12px;color:#8d7f70;margin-top:2px;">${escapeHtml(cp.description)}</div>` : ''}
             </div>
@@ -470,11 +510,18 @@
       editingCouponId = cp.id;
       editingImageUrl = cp.image_url || '';
 
+      const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+      couponTypeSelect.value = hasLimit ? 'limited' : 'unlimited';
+      syncCouponTypeUI();
+
+      if (hasLimit) {
+        const qtyVal = String(cp.total_quantity);
+        qtyInput.value = qtyVal;
+        qtyPreset.value = ['10', '30', '50', '100'].includes(qtyVal) ? qtyVal : 'custom';
+      }
+
       document.getElementById('cp-store').value = cp.store_name || '';
       document.getElementById('cp-discount').value = cp.discount_info || '';
-      const qtyVal = String(cp.total_quantity ?? 50);
-      qtyInput.value = qtyVal;
-      qtyPreset.value = ['10', '30', '50', '100'].includes(qtyVal) ? qtyVal : 'custom';
       document.getElementById('cp-valid-until').value = cp.valid_until || '';
       document.getElementById('cp-desc').value = cp.description || '';
       document.getElementById('cp-image').value = '';
@@ -512,7 +559,8 @@
         imageUrl = urlData.publicUrl;
       }
 
-      const totalQty = Math.max(1, parseInt(qtyInput.value, 10) || 50);
+      const isLimited = couponTypeSelect.value === 'limited';
+      const totalQty = isLimited ? Math.max(1, parseInt(qtyInput.value, 10) || 50) : null;
       const validUntil = document.getElementById('cp-valid-until').value || null;
 
       const payload = {
@@ -551,6 +599,7 @@
       }
     };
 
+    syncCouponTypeUI();
     checkAuth();
   </script>
 </body>
