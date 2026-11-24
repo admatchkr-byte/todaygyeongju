@@ -100,7 +100,11 @@
             class="grid grid-cols-1 md:grid-cols-2 gap-6"
         ></div>
 
-
+<!-- 관리자 페이지에서 등록한 추가 쿠폰 목록 -->
+        <div
+            id="adminCouponGrid"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
+        ></div>
         <!-- 추가 매장 안내 -->
         <div class="mt-6 bg-[#f4ebd9]/40 border border-[#e6d5c3] rounded-2xl p-6 text-center">
 
@@ -209,7 +213,7 @@
         */
 
         const SUPABASE_URL =
-            'https://arylfkbmrfuemwephenq.supabase.co;
+            'https://arylfkbmrfuemwephenq.supabase.co';
 
         const SUPABASE_PUBLISHABLE_KEY =
             'sb_publishable_FEx0nbD8ziUzdNr0K5YJFw_sCwHxzm1';
@@ -1206,7 +1210,69 @@
 
         }
 
+/*
+        ============================================
+        15. 관리자 페이지(admin.html) 등록 쿠폰 불러오기
+        ============================================
+        */
+        const ADMIN_SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
+        const ADMIN_SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
 
+        const escHtml = (s = '') =>
+            String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        async function loadAdminCoupons() {
+            const box = document.getElementById('adminCouponGrid');
+            if (!box || !window.supabase) return;
+
+            const adminDb = window.supabase.createClient(
+                ADMIN_SUPABASE_URL,
+                ADMIN_SUPABASE_KEY,
+                {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                }
+            );
+
+            const { data, error } = await adminDb
+                .from('coupons')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) return;
+
+            box.innerHTML = data.map(cp => {
+                const safeUrl = cp.image_url && /^https?:\/\//.test(cp.image_url) ? escHtml(cp.image_url) : '';
+                return `
+                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs font-bold text-[#8c4a32] bg-[#f4ebd9] px-2.5 py-1 rounded">
+                                    제휴 쿠폰
+                                </span>
+                                <span class="text-lg font-bold text-[#8c4a32]">
+                                    ${escHtml(cp.discount_info)}
+                                </span>
+                            </div>
+                            ${safeUrl ? `<img src="${safeUrl}" alt="${escHtml(cp.store_name)}" class="w-full h-44 object-cover rounded-xl border border-[#e8e2d8] mb-4">` : ''}
+                            <h3 class="font-batang font-bold text-xl mb-1">${escHtml(cp.store_name)}</h3>
+                            ${cp.description ? `<p class="text-xs text-gray-500 mb-4">${escHtml(cp.description)}</p>` : '<div class="mb-4"></div>'}
+                        </div>
+                        ${safeUrl ? `
+                            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
+                               class="block text-center w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm">
+                                쿠폰 이미지 보기 / 저장 📥
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.addEventListener('DOMContentLoaded', loadAdminCoupons);
         window.addEventListener(
             'DOMContentLoaded',
             init
