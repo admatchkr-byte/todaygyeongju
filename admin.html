@@ -141,6 +141,22 @@
                 <input type="text" id="cp-discount" required placeholder="예: 전 메뉴 10% 할인" />
               </div>
             </div>
+            <div class="row">
+              <div>
+                <label>한정 수량 선택 *</label>
+                <select id="cp-qty-preset">
+                  <option value="10">선착순 10개</option>
+                  <option value="30">선착순 30개</option>
+                  <option value="50" selected>선착순 50개</option>
+                  <option value="100">선착순 100개</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+              </div>
+              <div>
+                <label>수량 직접 확인 / 입력 (개)</label>
+                <input type="number" id="cp-qty" min="1" value="50" required />
+              </div>
+            </div>
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
             <label>쿠폰 이미지 업로드</label>
@@ -174,6 +190,20 @@
         document.getElementById('events-tab').classList.toggle('hidden', btn.dataset.tab !== 'events-tab');
         document.getElementById('coupons-tab').classList.toggle('hidden', btn.dataset.tab !== 'coupons-tab');
       });
+    });
+
+    // 한정 수량 선택 연동
+    const qtyPreset = document.getElementById('cp-qty-preset');
+    const qtyInput = document.getElementById('cp-qty');
+    qtyPreset.addEventListener('change', () => {
+      if (qtyPreset.value !== 'custom') {
+        qtyInput.value = qtyPreset.value;
+      } else {
+        qtyInput.focus();
+      }
+    });
+    qtyInput.addEventListener('input', () => {
+      qtyPreset.value = ['10', '30', '50', '100'].includes(qtyInput.value) ? qtyInput.value : 'custom';
     });
 
     // 로그인 상태 확인
@@ -267,19 +297,29 @@
       if (error) return (list.textContent = '불러오기 실패: ' + error.message);
       if (!data.length) return (list.textContent = '등록된 쿠폰이 없습니다.');
 
-      list.innerHTML = data.map(cp => `
-        <div class="item">
-          ${cp.image_url ? `<img class="thumb" src="${escapeHtml(cp.image_url)}" alt="">` : ''}
-          <div class="item-info">
-            <div><span class="badge">${escapeHtml(cp.discount_info)}</span><strong>${escapeHtml(cp.store_name)}</strong></div>
-            <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">${escapeHtml(cp.description || '')}</div>
+      list.innerHTML = data.map(cp => {
+        const total = cp.total_quantity ?? 50;
+        const issued = cp.issued_quantity ?? 0;
+        const remaining = Math.max(0, total - issued);
+        return `
+          <div class="item">
+            ${cp.image_url ? `<img class="thumb" src="${escapeHtml(cp.image_url)}" alt="">` : ''}
+            <div class="item-info">
+              <div>
+                <span class="badge">${escapeHtml(cp.discount_info)}</span>
+                <strong>${escapeHtml(cp.store_name)}</strong>
+              </div>
+              <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
+                남은 수량: <strong>${remaining}개</strong> / 총 ${total}개 · ${escapeHtml(cp.description || '설명 없음')}
+              </div>
+            </div>
+            <button class="danger" onclick="deleteCoupon(${cp.id})">삭제</button>
           </div>
-          <button class="danger" onclick="deleteCoupon(${cp.id})">삭제</button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
-    // 쿠폰 등록 (이미지 업로드 포함)
+    // 쿠폰 등록 (이미지 업로드 + 한정 수량)
     document.getElementById('coupon-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('cp-msg');
@@ -298,17 +338,23 @@
         imageUrl = urlData.publicUrl;
       }
 
+      const totalQty = Math.max(1, parseInt(document.getElementById('cp-qty').value, 10) || 50);
+
       const payload = {
         store_name: document.getElementById('cp-store').value.trim(),
         discount_info: document.getElementById('cp-discount').value.trim(),
         description: document.getElementById('cp-desc').value.trim(),
-        image_url: imageUrl
+        image_url: imageUrl,
+        total_quantity: totalQty,
+        issued_quantity: 0
       };
 
       const { error } = await sb.from('coupons').insert([payload]);
       if (error) return (msg.textContent = '등록 실패: ' + error.message);
 
       e.target.reset();
+      qtyPreset.value = '50';
+      qtyInput.value = '50';
       msg.textContent = '쿠폰이 등록되었습니다!';
       loadCoupons();
     });
