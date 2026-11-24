@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>오늘, 경주 - 관리자 페이지</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏯%3C/text%3E%3C/svg%3E">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -91,8 +92,8 @@
 
       <!-- 행사 관리 탭 -->
       <div id="events-tab">
-        <div class="card">
-          <h2>새 행사 등록</h2>
+        <div class="card" id="event-form-card">
+          <h2 id="ev-form-title">새 행사 등록</h2>
           <form id="event-form">
             <div class="row">
               <div>
@@ -123,7 +124,13 @@
             <input type="text" id="ev-location" placeholder="예: 경주시 황남동 일대" />
             <label>설명</label>
             <textarea id="ev-desc" placeholder="행사 시간, 입장료 등 간단한 안내"></textarea>
-            <button type="submit">행사 등록하기</button>
+            <label>행사 포스터 / 사진 업로드 (선택)</label>
+            <input type="file" id="ev-image" accept="image/*" />
+            <div id="ev-image-hint" class="hint hidden"></div>
+            <div class="btn-row">
+              <button type="submit" id="ev-submit-btn">행사 등록하기</button>
+              <button type="button" id="ev-cancel-btn" class="secondary hidden">수정 취소</button>
+            </div>
             <div id="ev-msg" class="msg"></div>
           </form>
         </div>
@@ -193,6 +200,10 @@
     const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let eventsCache = [];
+    let editingEventId = null;
+    let editingEventImageUrl = '';
+
     let couponsCache = [];
     let editingCouponId = null;
     let editingImageUrl = '';
@@ -226,7 +237,24 @@
       qtyPreset.value = ['10', '30', '50', '100'].includes(qtyInput.value) ? qtyInput.value : 'custom';
     });
 
-    // 쿠폰 폼 초기화 (등록 모드로 복귀)
+    // 행사 폼 초기화
+    function resetEventForm() {
+      editingEventId = null;
+      editingEventImageUrl = '';
+      document.getElementById('event-form').reset();
+      document.getElementById('ev-form-title').textContent = '새 행사 등록';
+      document.getElementById('ev-submit-btn').textContent = '행사 등록하기';
+      document.getElementById('ev-cancel-btn').classList.add('hidden');
+      document.getElementById('ev-image-hint').classList.add('hidden');
+      document.getElementById('ev-image-hint').textContent = '';
+    }
+
+    document.getElementById('ev-cancel-btn').addEventListener('click', () => {
+      resetEventForm();
+      document.getElementById('ev-msg').textContent = '';
+    });
+
+    // 쿠폰 폼 초기화
     function resetCouponForm() {
       editingCouponId = null;
       editingImageUrl = '';
@@ -283,26 +311,77 @@
       const { data, error } = await sb.from('events').select('*').order('created_at', { ascending: false });
       const list = document.getElementById('events-list');
       if (error) return (list.textContent = '불러오기 실패: ' + error.message);
-      if (!data.length) return (list.textContent = '등록된 행사가 없습니다.');
+      if (!data.length) {
+        eventsCache = [];
+        return (list.textContent = '등록된 행사가 없습니다.');
+      }
 
+      eventsCache = data;
       list.innerHTML = data.map(ev => `
         <div class="item">
+          ${ev.image_url ? `<img class="thumb" src="${escapeHtml(ev.image_url)}" alt="">` : ''}
           <div class="item-info">
             <div><span class="badge">${escapeHtml(ev.category)}</span><strong>${escapeHtml(ev.title)}</strong></div>
             <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
               ${escapeHtml(ev.start_date || '미정')} ~ ${escapeHtml(ev.end_date || '미정')} · ${escapeHtml(ev.location || '장소 미정')}
             </div>
           </div>
-          <button class="danger" onclick="deleteEvent(${ev.id})">삭제</button>
+          <div class="actions">
+            <button class="edit" onclick="editEvent(${ev.id})">수정</button>
+            <button class="danger" onclick="deleteEvent(${ev.id})">삭제</button>
+          </div>
         </div>
       `).join('');
     }
 
-    // 행사 등록
+    // 행사 수정 시작
+    window.editEvent = (id) => {
+      const ev = eventsCache.find(item => item.id === id);
+      if (!ev) return;
+
+      editingEventId = ev.id;
+      editingEventImageUrl = ev.image_url || '';
+
+      document.getElementById('ev-category').value = ev.category || '축제';
+      document.getElementById('ev-title').value = ev.title || '';
+      document.getElementById('ev-start').value = ev.start_date || '';
+      document.getElementById('ev-end').value = ev.end_date || '';
+      document.getElementById('ev-location').value = ev.location || '';
+      document.getElementById('ev-desc').value = ev.description || '';
+      document.getElementById('ev-image').value = '';
+
+      document.getElementById('ev-form-title').textContent = `행사 수정 (${ev.title})`;
+      document.getElementById('ev-submit-btn').textContent = '수정 저장하기';
+      document.getElementById('ev-cancel-btn').classList.remove('hidden');
+
+      const hint = document.getElementById('ev-image-hint');
+      hint.textContent = editingEventImageUrl
+        ? '새 파일을 선택하지 않으면 기존 행사 이미지가 그대로 유지됩니다.'
+        : '현재 등록된 이미지가 없습니다. 필요하면 이미지를 선택해 주세요.';
+      hint.classList.remove('hidden');
+
+      document.getElementById('ev-msg').textContent = '';
+      document.getElementById('event-form-card').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // 행사 등록 및 수정 저장
     document.getElementById('event-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('ev-msg');
       msg.textContent = '저장 중...';
+
+      let imageUrl = editingEventId ? editingEventImageUrl : '';
+      const file = document.getElementById('ev-image').files[0];
+
+      if (file) {
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await sb.storage.from('events').upload(fileName, file);
+        if (upErr) return (msg.textContent = '이미지 업로드 실패: ' + upErr.message);
+
+        const { data: urlData } = sb.storage.from('events').getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+      }
 
       const payload = {
         category: document.getElementById('ev-category').value,
@@ -310,14 +389,22 @@
         start_date: document.getElementById('ev-start').value || null,
         end_date: document.getElementById('ev-end').value || null,
         location: document.getElementById('ev-location').value.trim(),
-        description: document.getElementById('ev-desc').value.trim()
+        description: document.getElementById('ev-desc').value.trim(),
+        image_url: imageUrl
       };
 
-      const { error } = await sb.from('events').insert([payload]);
-      if (error) return (msg.textContent = '등록 실패: ' + error.message);
+      let error;
+      if (editingEventId) {
+        ({ error } = await sb.from('events').update(payload).eq('id', editingEventId));
+      } else {
+        ({ error } = await sb.from('events').insert([payload]));
+      }
 
-      e.target.reset();
-      msg.textContent = '행사가 등록되었습니다!';
+      if (error) return (msg.textContent = '저장 실패: ' + error.message);
+
+      const wasEditing = !!editingEventId;
+      resetEventForm();
+      msg.textContent = wasEditing ? '행사가 수정되었습니다!' : '행사가 등록되었습니다!';
       loadEvents();
     });
 
@@ -326,7 +413,10 @@
       if (!confirm('이 행사를 삭제할까요?')) return;
       const { error } = await sb.from('events').delete().eq('id', id);
       if (error) alert('삭제 실패: ' + error.message);
-      else loadEvents();
+      else {
+        if (editingEventId === id) resetEventForm();
+        loadEvents();
+      }
     };
 
     // 쿠폰 불러오기
