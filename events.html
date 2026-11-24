@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경주 행사 전체 일정 - 오늘, 경주</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏯%3C/text%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #faf8f5;
+            color: #2c2522;
+        }
+        .font-batang {
+            font-family: 'Gowun Batang', serif;
+        }
+    </style>
+</head>
+
+<body class="bg-[#faf8f5] min-h-screen flex flex-col">
+
+    <!-- 상단 네비게이션 -->
+    <header class="bg-white/85 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <a href="index.html" class="text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
+                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">행사 일정</span>
+            </div>
+            <a href="index.html" class="text-sm font-medium text-[#8c4a32] hover:underline">← 메인으로 돌아가기</a>
+        </div>
+    </header>
+
+    <!-- 행사 전체 리스트 -->
+    <main class="max-w-4xl mx-auto px-4 py-10 flex-grow w-full">
+        <div class="text-center mb-8">
+            <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">DAILY EVENTS</span>
+            <h1 class="text-3xl font-bold font-batang mt-1 mb-2">경주에서 열리는 행사 일정</h1>
+            <p class="text-sm text-gray-600">축제부터 공연, 전시, 팝업까지 경주의 모든 일정을 확인해 보세요.</p>
+        </div>
+
+        <!-- 카테고리 필터 버튼 -->
+        <div id="categoryTabs" class="flex flex-wrap justify-center gap-2 mb-8">
+            <button type="button" data-filter="전체보기" class="filter-btn px-4 py-2 rounded-full text-sm font-bold transition bg-[#8c4a32] text-white shadow-sm">
+                전체보기
+            </button>
+            <button type="button" data-filter="축제" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold transition bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9]">
+                축제
+            </button>
+            <button type="button" data-filter="공연" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold transition bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9]">
+                공연
+            </button>
+            <button type="button" data-filter="전시" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold transition bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9]">
+                전시
+            </button>
+            <button type="button" data-filter="팝업" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold transition bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9]">
+                팝업
+            </button>
+        </div>
+
+        <!-- 건수 안내 -->
+        <div class="flex items-center justify-between text-xs text-gray-500 mb-3 px-1">
+            <span id="eventCount">일정을 불러오는 중...</span>
+        </div>
+
+        <!-- 리스트 영역 -->
+        <div id="eventList" class="space-y-4">
+            <div class="bg-white border border-[#e8e2d8] rounded-2xl p-10 text-center text-gray-500 text-sm">
+                행사 일정을 불러오는 중입니다...
+            </div>
+        </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-[#e8e2d8] py-8 text-center text-xs text-gray-500">
+        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">오늘, 경주 (TODAY GYEONGJU)</p>
+        <p>© 2026 Today Gyeongju. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
+
+        let allEvents = [];
+        let currentFilter = '전체보기';
+
+        const esc = (s = '') =>
+            String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        const getTodayKst = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+        function matchesCategory(ev, filter) {
+            if (filter === '전체보기') return true;
+            const cat = (ev.category || '').trim();
+            if (filter === '팝업') return cat.includes('팝업');
+            return cat === filter;
+        }
+
+        function getCategoryStyle(category = '') {
+            if (category === '전시') return 'bg-amber-600/10 text-amber-700';
+            if (category === '공연') return 'bg-emerald-600/10 text-emerald-700';
+            if (category.includes('팝업')) return 'bg-sky-600/10 text-sky-700';
+            return 'bg-[#8c4a32]/10 text-[#8c4a32]';
+        }
+
+        function getStatusBadge(startDate, endDate) {
+            const today = getTodayKst();
+            const end = endDate || startDate;
+            if (end && today > end) {
+                return '<span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-500">종료</span>';
+            }
+            if (startDate && today < startDate) {
+                return '<span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">진행 예정</span>';
+            }
+            if (startDate || endDate) {
+                return '<span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">진행 중</span>';
+            }
+            return '';
+        }
+
+        function updateTabStyles() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const active = btn.dataset.filter === currentFilter;
+                btn.className = active
+                    ? 'filter-btn px-4 py-2 rounded-full text-sm font-bold transition bg-[#8c4a32] text-white shadow-sm'
+                    : 'filter-btn px-4 py-2 rounded-full text-sm font-semibold transition bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9]';
+            });
+        }
+
+        function renderEvents() {
+            const listEl = document.getElementById('eventList');
+            const countEl = document.getElementById('eventCount');
+            const filtered = allEvents.filter(ev => matchesCategory(ev, currentFilter));
+
+            countEl.textContent = `${currentFilter} · 총 ${filtered.length}건`;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="bg-white border border-dashed border-[#e6d5c3] rounded-2xl p-12 text-center text-gray-500 text-sm">
+                        선택하신 '${esc(currentFilter)}' 카테고리에 등록된 행사가 아직 없습니다.
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(ev => {
+                const dateText = ev.start_date
+                    ? `${esc(ev.start_date)}${ev.end_date && ev.end_date !== ev.start_date ? ' ~ ' + esc(ev.end_date) : ''}`
+                    : '일정 미정';
+                const statusBadge = getStatusBadge(ev.start_date, ev.end_date);
+                const catStyle = getCategoryStyle(ev.category || '축제');
+
+                return `
+                    <article class="bg-white border border-[#e8e2d8] rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-md ${catStyle}">
+                                    ${esc(ev.category || '행사')}
+                                </span>
+                                ${statusBadge}
+                            </div>
+                            <span class="text-xs text-gray-500 font-medium">
+                                🕒 ${dateText}
+                            </span>
+                        </div>
+
+                        <h2 class="text-lg md:text-xl font-bold font-batang text-[#2c2522] mb-1.5">
+                            ${esc(ev.title)}
+                        </h2>
+
+                        <p class="text-xs md:text-sm text-gray-500 mb-2">
+                            📍 ${esc(ev.location || '경주시 일원')}
+                        </p>
+
+                        ${ev.description ? `
+                            <p class="text-sm text-gray-600 leading-relaxed pt-2 border-t border-[#f4ebd9] whitespace-pre-line">
+                                ${esc(ev.description)}
+                            </p>
+                        ` : ''}
+                    </article>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('categoryTabs').addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            currentFilter = btn.dataset.filter;
+            updateTabStyles();
+            renderEvents();
+        });
+
+        async function loadEvents() {
+            const listEl = document.getElementById('eventList');
+            const countEl = document.getElementById('eventCount');
+
+            try {
+                const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+                });
+
+                const { data, error } = await sb
+                    .from('events')
+                    .select('*')
+                    .order('start_date', { ascending: true });
+
+                if (error) throw error;
+
+                allEvents = data || [];
+                renderEvents();
+            } catch (err) {
+                console.error('행사 불러오기 실패:', err);
+                countEl.textContent = '';
+                listEl.innerHTML = `
+                    <div class="bg-white border border-[#e8e2d8] rounded-2xl p-10 text-center text-gray-500 text-sm">
+                        행사 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+                    </div>
+                `;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadEvents);
+    </script>
+</body>
+</html>
