@@ -98,6 +98,8 @@
         let db = null;
         let couponList = [];
         let currentAsset = null;
+        let currentModalCouponId = null;
+        let currentModalJustClaimed = false;
         const claiming = new Set();
 
         const esc = (s = '') =>
@@ -148,6 +150,7 @@
             couponList = data || [];
 
             if (couponList.length === 0) {
+                if (currentModalCouponId !== null) closeModal();
                 grid.innerHTML = `
                     <div class="col-span-1 md:col-span-2 text-center py-12 bg-white border border-dashed border-[#e6d5c3] rounded-2xl text-gray-500">
                         현재 등록된 쿠폰이 없습니다. 곧 새로운 할인 혜택으로 찾아올게요!
@@ -159,6 +162,18 @@
 
             renderCoupons();
             status.innerText = '쿠폰 잔여 수량은 실시간으로 반영됩니다.';
+
+            // 다운로드 창이 열려 있는 상태에서 수량 소진/만료 시 창 자동 닫기
+            if (currentModalCouponId !== null) {
+                const activeCp = couponList.find(item => item.id === currentModalCouponId);
+                const isActiveExpired = Boolean(activeCp && activeCp.valid_until && getTodayKst() > activeCp.valid_until);
+                const activeRemaining = activeCp ? Math.max(0, (activeCp.total_quantity ?? 50) - (activeCp.issued_quantity ?? 0)) : 0;
+
+                if (!activeCp || isActiveExpired || (!currentModalJustClaimed && activeRemaining === 0)) {
+                    closeModal();
+                    alert(isActiveExpired ? '유효기간이 만료되어 마감됐습니다.' : '선착순 수량이 모두 소진되어 마감됐습니다.');
+                }
+            }
         }
 
         function renderCoupons() {
@@ -171,33 +186,46 @@
                 const remaining = Math.max(0, total - issued);
                 const percent = total > 0 ? (remaining / total) * 100 : 0;
                 const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
+                const isClosed = isExpired || remaining === 0;
                 const myClaim = getMyClaim(cp.id);
                 const isClaiming = claiming.has(cp.id);
                 const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
                 const validText = formatValidUntil(cp.valid_until);
 
+                let badgeText = '선착순 쿠폰';
+                let badgeClass = 'text-emerald-700 bg-emerald-100';
+                let statusText = `🎟️ 선착순 ${remaining}개 남음 / ${total}개`;
                 let btnText = '쿠폰 받기 📥';
                 let btnDisabled = false;
+                let barWidth = percent;
 
                 if (isClaiming) {
                     btnText = '발급 처리 중...';
                     btnDisabled = true;
                 } else if (isExpired) {
-                    btnText = '사용 기간 만료 🔒';
+                    badgeText = '기간 만료';
+                    badgeClass = 'text-rose-700 bg-rose-100';
+                    statusText = '⏰ 유효기간이 종료되어 마감됐습니다';
+                    btnText = '마감됐습니다 🔒';
                     btnDisabled = true;
+                    barWidth = 0;
+                } else if (remaining === 0) {
+                    badgeText = '선착순 마감';
+                    badgeClass = 'text-rose-700 bg-rose-100';
+                    statusText = '🔒 선착순 마감됐습니다';
+                    btnText = '마감됐습니다 🔒';
+                    btnDisabled = true;
+                    barWidth = 0;
                 } else if (myClaim) {
                     btnText = '내 쿠폰 다시 보기 📥';
-                } else if (remaining === 0) {
-                    btnText = '선착순 마감 🔒';
-                    btnDisabled = true;
                 }
 
                 return `
-                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm flex flex-col justify-between ${isExpired ? 'opacity-70' : ''}">
+                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm flex flex-col justify-between ${isClosed ? 'opacity-75' : ''}">
                         <div>
                             <div class="flex justify-between items-center mb-3 gap-2">
-                                <span class="text-xs font-bold ${isExpired ? 'text-rose-700 bg-rose-100' : 'text-emerald-700 bg-emerald-100'} px-2.5 py-1 rounded">
-                                    ${isExpired ? '기간 만료' : '선착순 쿠폰'}
+                                <span class="text-xs font-bold ${badgeClass} px-2.5 py-1 rounded">
+                                    ${badgeText}
                                 </span>
                                 <span class="text-base font-bold text-[#8c4a32] text-right">
                                     ${esc(cp.discount_info)}
@@ -210,16 +238,16 @@
                         </div>
 
                         <div>
-                            <p class="text-sm font-bold text-[#8c4a32] mb-2">
-                                ${isExpired ? '⏰ 유효기간이 종료된 쿠폰입니다' : (remaining > 0 ? `🎟️ 선착순 ${remaining}개 남음 / ${total}개` : '🔒 한정 수량이 모두 소진되었습니다')}
+                            <p class="text-sm font-bold ${isClosed ? 'text-rose-700' : 'text-[#8c4a32]'} mb-2">
+                                ${statusText}
                             </p>
                             <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-4">
-                                <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${isExpired ? 0 : percent}%"></div>
+                                <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${barWidth}%"></div>
                             </div>
                             <button
                                 onclick="handleCouponClick(${cp.id})"
                                 ${btnDisabled ? 'disabled' : ''}
-                                class="w-full bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] font-bold py-2.5 rounded-xl transition border border-[#d2c4b4] text-sm disabled:opacity-60">
+                                class="w-full ${isClosed ? 'bg-gray-200 text-gray-500 border-gray-300' : 'bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] border-[#d2c4b4]'} font-bold py-2.5 rounded-xl transition border text-sm disabled:opacity-70">
                                 ${btnText}
                             </button>
                         </div>
@@ -233,7 +261,17 @@
             if (!cp || claiming.has(couponId)) return;
 
             if (cp.valid_until && getTodayKst() > cp.valid_until) {
-                alert('유효기간이 지난 쿠폰입니다.');
+                closeModal();
+                alert('유효기간이 만료되어 마감됐습니다.');
+                await loadCoupons();
+                return;
+            }
+
+            const total = cp.total_quantity ?? 50;
+            const issued = cp.issued_quantity ?? 0;
+            if (total - issued <= 0) {
+                closeModal();
+                alert('선착순 수량이 모두 소진되어 마감됐습니다.');
                 await loadCoupons();
                 return;
             }
@@ -256,10 +294,11 @@
                 if (error) throw error;
 
                 if (!data || !data.success) {
+                    closeModal();
                     if (data && data.error === 'EXPIRED') {
-                        alert('유효기간이 만료된 쿠폰입니다.');
+                        alert('유효기간이 만료되어 마감됐습니다.');
                     } else if (data && data.error === 'SOLD_OUT') {
-                        alert('아쉽지만 선착순 수량이 모두 소진되었습니다.');
+                        alert('선착순 수량이 모두 소진되어 마감됐습니다.');
                     } else {
                         alert('쿠폰을 발급하지 못했습니다. 잠시 후 다시 시도해 주세요.');
                     }
@@ -271,6 +310,7 @@
                 await openCouponModal(cp, claimRecord, !data.already_claimed);
             } catch (err) {
                 console.error(err);
+                closeModal();
                 alert('쿠폰 발급 중 오류가 발생했습니다.');
             } finally {
                 claiming.delete(couponId);
@@ -312,131 +352,3 @@
 
             ctx.fillStyle = '#2c2522';
             ctx.font = 'bold 72px Pretendard, sans-serif';
-            ctx.fillText(cp.store_name, 540, 560, 850);
-
-            ctx.fillStyle = '#8c4a32';
-            ctx.font = 'bold 64px Pretendard, sans-serif';
-            ctx.fillText(cp.discount_info, 540, 720, 850);
-
-            ctx.strokeStyle = '#d2c4b4';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(150, 830);
-            ctx.lineTo(930, 830);
-            ctx.stroke();
-
-            ctx.fillStyle = '#555555';
-            ctx.font = 'bold 34px monospace';
-            ctx.fillText('발급번호 #' + String(claimId).padStart(4, '0'), 540, 940);
-
-            ctx.fillStyle = '#8c4a32';
-            ctx.font = 'bold 30px Pretendard, sans-serif';
-            ctx.fillText('유효기간: ' + formatValidUntil(cp.valid_until), 540, 1030, 850);
-
-            ctx.fillStyle = '#555555';
-            ctx.font = '28px Pretendard, sans-serif';
-            ctx.fillText('매장 직원에게 쿠폰을 보여주세요.', 540, 1180, 850);
-
-            return new Promise((resolve, reject) => {
-                canvas.toBlob(blob => {
-                    if (!blob) return reject(new Error('이미지 생성 실패'));
-                    const filename = `오늘경주_${cp.store_name}_쿠폰.png`;
-                    resolve({
-                        file: new File([blob], filename, { type: 'image/png' }),
-                        filename,
-                        url: URL.createObjectURL(blob)
-                    });
-                }, 'image/png');
-            });
-        }
-
-        async function openCouponModal(cp, claimRecord, isNew) {
-            currentAsset = null;
-
-            document.getElementById('modalCode').innerText = '발급번호 #' + String(claimRecord.claim_id).padStart(4, '0');
-            document.getElementById('modalName').innerText = cp.store_name;
-            document.getElementById('modalDiscount').innerText = '🎉 ' + cp.discount_info;
-            document.getElementById('modalExpiry').innerText = '📅 유효기간: ' + formatValidUntil(cp.valid_until);
-            document.getElementById('modalStatus').innerText = '쿠폰 이미지를 준비하고 있습니다...';
-
-            const imgEl = document.getElementById('couponImage');
-            imgEl.classList.add('hidden');
-            document.getElementById('saveButton').disabled = true;
-
-            const modal = document.getElementById('couponModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            try {
-                if (cp.image_url && /^https?:\/\//.test(cp.image_url)) {
-                    const res = await fetch(cp.image_url);
-                    const blob = await res.blob();
-                    const ext = (blob.type && blob.type.split('/')[1]) || 'png';
-                    const filename = `오늘경주_${cp.store_name}_쿠폰.${ext}`;
-                    currentAsset = {
-                        file: new File([blob], filename, { type: blob.type || 'image/png' }),
-                        filename,
-                        url: URL.createObjectURL(blob)
-                    };
-                } else {
-                    currentAsset = await createFallbackCouponImage(cp, claimRecord.claim_id);
-                }
-
-                imgEl.src = currentAsset.url;
-                imgEl.classList.remove('hidden');
-                document.getElementById('saveButton').disabled = false;
-                document.getElementById('modalStatus').innerText = isNew
-                    ? '🎉 선착순 쿠폰 발급 완료! 아래 버튼으로 저장하세요.'
-                    : '이미 발급받은 쿠폰입니다. 다시 저장할 수 있어요.';
-            } catch (e) {
-                console.error(e);
-                if (cp.image_url) {
-                    imgEl.src = cp.image_url;
-                    imgEl.classList.remove('hidden');
-                }
-                document.getElementById('modalStatus').innerText = '쿠폰이 확인되었습니다. 이미지를 길게 눌러 저장해 주세요.';
-            }
-        }
-
-        function forceDownload(asset) {
-            const link = document.createElement('a');
-            link.href = asset.url;
-            link.download = asset.filename;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        }
-
-        function saveCoupon() {
-            if (!currentAsset) return;
-            if (navigator.canShare && navigator.canShare({ files: [currentAsset.file] })) {
-                navigator.share({
-                    files: [currentAsset.file],
-                    title: '오늘, 경주 할인 쿠폰'
-                }).catch(err => {
-                    if (err.name !== 'AbortError') forceDownload(currentAsset);
-                });
-            } else {
-                forceDownload(currentAsset);
-            }
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('couponModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        async function init() {
-            db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-                auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-            });
-            await loadCoupons();
-            setInterval(() => { if (!document.hidden) loadCoupons(); }, 15000);
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) loadCoupons(); });
-        }
-
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
