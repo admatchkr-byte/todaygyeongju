@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>황리단길 대표 맛집, 카페 할인 쿠폰북 - 오늘, 경주</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏯%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css" rel="stylesheet">
@@ -97,6 +98,7 @@
 
         let db = null;
         let couponList = [];
+        let lastCouponSignature = '';
         let currentAsset = null;
         let currentModalCouponId = null;
         let currentModalJustClaimed = false;
@@ -130,6 +132,13 @@
             }
         }
 
+        function revokeCurrentAsset() {
+            if (currentAsset && currentAsset.url) {
+                URL.revokeObjectURL(currentAsset.url);
+            }
+            currentAsset = null;
+        }
+
         async function loadCoupons() {
             if (!db) return;
 
@@ -151,16 +160,37 @@
 
             if (couponList.length === 0) {
                 if (currentModalCouponId !== null) closeModal();
-                grid.innerHTML = `
-                    <div class="col-span-1 md:col-span-2 text-center py-12 bg-white border border-dashed border-[#e6d5c3] rounded-2xl text-gray-500">
-                        현재 등록된 쿠폰이 없습니다. 곧 새로운 할인 혜택으로 찾아올게요!
-                    </div>
-                `;
+                if (lastCouponSignature !== 'EMPTY') {
+                    lastCouponSignature = 'EMPTY';
+                    grid.innerHTML = `
+                        <div class="col-span-1 md:col-span-2 text-center py-12 bg-white border border-dashed border-[#e6d5c3] rounded-2xl text-gray-500">
+                            현재 등록된 쿠폰이 없습니다. 곧 새로운 할인 혜택으로 찾아올게요!
+                        </div>
+                    `;
+                }
                 status.innerText = '';
                 return;
             }
 
-            renderCoupons();
+            // 변동 사항(수량, 마감일 등)이 있을 때만 화면 다시 그리기
+            const signature = JSON.stringify(
+                couponList.map(c => [
+                    c.id,
+                    c.store_name,
+                    c.discount_info,
+                    c.description,
+                    c.image_url,
+                    c.total_quantity,
+                    c.issued_quantity,
+                    c.valid_until
+                ])
+            );
+
+            if (signature !== lastCouponSignature) {
+                lastCouponSignature = signature;
+                renderCoupons();
+            }
+
             status.innerText = '쿠폰 잔여 수량은 실시간으로 반영됩니다.';
 
             // 다운로드 창이 열려 있는 상태에서 수량 소진/만료 시 창 자동 닫기
@@ -231,7 +261,7 @@
                                     ${esc(cp.discount_info)}
                                 </span>
                             </div>
-                            ${safeImg ? `<img src="${safeImg}" alt="${esc(cp.store_name)}" class="w-full h-44 object-cover rounded-xl border border-[#e8e2d8] mb-4">` : ''}
+                            ${safeImg ? `<img src="${safeImg}" loading="lazy" alt="${esc(cp.store_name)}" class="w-full h-44 object-cover rounded-xl border border-[#e8e2d8] mb-4">` : ''}
                             <h3 class="font-batang font-bold text-xl mb-1">${esc(cp.store_name)}</h3>
                             <p class="text-xs font-semibold text-[#8c4a32] mb-1">📅 유효기간: ${esc(validText)}</p>
                             <p class="text-xs text-gray-500 mb-4">${esc(cp.description || '매장 방문 시 쿠폰을 제시해 주세요.')}</p>
@@ -263,6 +293,7 @@
             if (cp.valid_until && getTodayKst() > cp.valid_until) {
                 closeModal();
                 alert('유효기간이 만료되어 마감됐습니다.');
+                lastCouponSignature = '';
                 await loadCoupons();
                 return;
             }
@@ -272,6 +303,7 @@
             if (total - issued <= 0) {
                 closeModal();
                 alert('선착순 수량이 모두 소진되어 마감됐습니다.');
+                lastCouponSignature = '';
                 await loadCoupons();
                 return;
             }
@@ -314,6 +346,7 @@
                 alert('쿠폰 발급 중 오류가 발생했습니다.');
             } finally {
                 claiming.delete(couponId);
+                lastCouponSignature = '';
                 await loadCoupons();
             }
         }
@@ -352,3 +385,150 @@
 
             ctx.fillStyle = '#2c2522';
             ctx.font = 'bold 72px Pretendard, sans-serif';
+            ctx.fillText(cp.store_name, 540, 560, 850);
+
+            ctx.fillStyle = '#8c4a32';
+            ctx.font = 'bold 64px Pretendard, sans-serif';
+            ctx.fillText(cp.discount_info, 540, 720, 850);
+
+            ctx.strokeStyle = '#d2c4b4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(150, 830);
+            ctx.lineTo(930, 830);
+            ctx.stroke();
+
+            ctx.fillStyle = '#555555';
+            ctx.font = 'bold 34px monospace';
+            ctx.fillText('발급번호 #' + String(claimId).padStart(4, '0'), 540, 940);
+
+            ctx.fillStyle = '#8c4a32';
+            ctx.font = 'bold 30px Pretendard, sans-serif';
+            ctx.fillText('유효기간: ' + formatValidUntil(cp.valid_until), 540, 1030, 850);
+
+            ctx.fillStyle = '#555555';
+            ctx.font = '28px Pretendard, sans-serif';
+            ctx.fillText('매장 직원에게 쿠폰을 보여주세요.', 540, 1180, 850);
+
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(blob => {
+                    if (!blob) return reject(new Error('이미지 생성 실패'));
+                    const filename = `오늘경주_${cp.store_name}_쿠폰.png`;
+                    resolve({
+                        file: new File([blob], filename, { type: 'image/png' }),
+                        filename,
+                        url: URL.createObjectURL(blob)
+                    });
+                }, 'image/png');
+            });
+        }
+
+        async function openCouponModal(cp, claimRecord, isNew) {
+            revokeCurrentAsset();
+            currentModalCouponId = cp.id;
+            currentModalJustClaimed = Boolean(isNew);
+
+            document.getElementById('modalCode').innerText = '발급번호 #' + String(claimRecord.claim_id).padStart(4, '0');
+            document.getElementById('modalName').innerText = cp.store_name;
+            document.getElementById('modalDiscount').innerText = '🎉 ' + cp.discount_info;
+            document.getElementById('modalExpiry').innerText = '📅 유효기간: ' + formatValidUntil(cp.valid_until);
+            document.getElementById('modalStatus').innerText = '쿠폰 이미지를 준비하고 있습니다...';
+
+            const imgEl = document.getElementById('couponImage');
+            imgEl.classList.add('hidden');
+            document.getElementById('saveButton').disabled = true;
+
+            const modal = document.getElementById('couponModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            try {
+                if (cp.image_url && /^https?:\/\//.test(cp.image_url)) {
+                    const res = await fetch(cp.image_url);
+                    const blob = await res.blob();
+                    const ext = (blob.type && blob.type.split('/')[1]) || 'png';
+                    const filename = `오늘경주_${cp.store_name}_쿠폰.${ext}`;
+                    currentAsset = {
+                        file: new File([blob], filename, { type: blob.type || 'image/png' }),
+                        filename,
+                        url: URL.createObjectURL(blob)
+                    };
+                } else {
+                    currentAsset = await createFallbackCouponImage(cp, claimRecord.claim_id);
+                }
+
+                if (currentModalCouponId !== cp.id) {
+                    revokeCurrentAsset();
+                    return;
+                }
+
+                imgEl.src = currentAsset.url;
+                imgEl.classList.remove('hidden');
+                document.getElementById('saveButton').disabled = false;
+                document.getElementById('modalStatus').innerText = isNew
+                    ? '🎉 선착순 쿠폰 발급 완료! 아래 버튼으로 저장하세요.'
+                    : '이미 발급받은 쿠폰입니다. 다시 저장할 수 있어요.';
+            } catch (e) {
+                console.error(e);
+                if (currentModalCouponId !== cp.id) return;
+                if (cp.image_url) {
+                    imgEl.src = cp.image_url;
+                    imgEl.classList.remove('hidden');
+                }
+                document.getElementById('modalStatus').innerText = '쿠폰이 확인되었습니다. 이미지를 길게 눌러 저장해 주세요.';
+            }
+        }
+
+        function forceDownload(asset) {
+            const link = document.createElement('a');
+            link.href = asset.url;
+            link.download = asset.filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function saveCoupon() {
+            const activeCp = couponList.find(item => item.id === currentModalCouponId);
+            const activeRemaining = activeCp ? Math.max(0, (activeCp.total_quantity ?? 50) - (activeCp.issued_quantity ?? 0)) : 0;
+            if (!activeCp || (!currentModalJustClaimed && activeRemaining === 0)) {
+                closeModal();
+                alert('선착순 수량이 모두 소진되어 마감됐습니다.');
+                return;
+            }
+
+            if (!currentAsset) return;
+            if (navigator.canShare && navigator.canShare({ files: [currentAsset.file] })) {
+                navigator.share({
+                    files: [currentAsset.file],
+                    title: '오늘, 경주 할인 쿠폰'
+                }).catch(err => {
+                    if (err.name !== 'AbortError') forceDownload(currentAsset);
+                });
+            } else {
+                forceDownload(currentAsset);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('couponModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentModalCouponId = null;
+            currentModalJustClaimed = false;
+            revokeCurrentAsset();
+        }
+
+        async function init() {
+            db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+            });
+            await loadCoupons();
+            setInterval(() => { if (!document.hidden) loadCoupons(); }, 30000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) loadCoupons(); });
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
