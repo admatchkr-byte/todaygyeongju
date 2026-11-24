@@ -143,120 +143,63 @@
 
     <!-- 1. 날씨 위젯 전용 스크립트 (분리) -->
     <script>
-        async function fetchWeather() {
-            try {
-                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.8562&longitude=129.2247&current_weather=true&timezone=Asia%2FSeoul');
-                const data = await response.json();
-
-                const current = data.current_weather;
-                const temp = Math.round(current.temperature);
-                const code = current.weathercode;
-
-                let weatherIcon = '🌤️';
-                let isRaining = false;
-
-                if (code === 0) { weatherIcon = '☀️'; }
-                else if (code >= 1 && code <= 3) { weatherIcon = '⛅'; }
-                else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) { weatherIcon = '🌧️'; isRaining = true; }
-                else if ((code >= 71 && code <= 77) || code === 85) { weatherIcon = '🌨️'; }
-                else { weatherIcon = '☁️'; }
-
-                document.getElementById('temp-text').innerText = `${temp}°C`;
-                document.getElementById('weather-icon').innerText = weatherIcon;
-
-                const hour = new Date().getHours();
-                let recommendation = '';
-
-                if (isRaining) {
-                    recommendation = '비 오는 날엔 황남동 감성 카페로☕';
-                } else if (temp < 10) {
-                    recommendation = '날씨가 쌀쌀해요! 따뜻한 실내 소품샵·카페 투어🧣';
-                } else if (hour >= 18) {
-                    recommendation = '동궁과 월지 환상적인 야경 코스✨';
-                } else if (temp > 28) {
-                    recommendation = '시원한 황리단길 음료 투어🛍️';
-                } else {
-                    recommendation = '대릉원 돌담길 걷기 참 좋은 날🍃';
-                }
-
-                document.getElementById('walk-recommend-text').innerText = recommendation;
-
-                const now = new Date();
-                document.getElementById('update-time').innerText = `${now.getHours()}시 ${now.getMinutes()}분 업데이트 완료`;
-            } catch (error) {
-                console.error('날씨 정보를 불러오지 못했습니다.', error);
-                document.getElementById('temp-text').innerText = '확인 불가';
-            }
-        }
-
-        fetchWeather();
-        setInterval(fetchWeather, 30 * 60 * 1000);
-    </script>
-
-    <!-- 2. Supabase 행사 & 쿠폰북 연동 스크립트 -->
-    <script>
-        (() => {
-            const SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
-            const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
-
-            const esc = (s = '') =>
-                String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-            const getTodayKst = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-            function getSupabaseClient() {
-                if (!window.supabase) {
-                    throw new Error('Supabase 라이브러리가 로드되지 않았습니다.');
-                }
-                return window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            }
-
-            async function fetchEvents() {
-                const container = document.getElementById('events-container');
+        async function fetchMainCoupons() {
+                const container = document.getElementById('main-coupons-container');
                 if (!container) return;
 
                 try {
                     const sb = getSupabaseClient();
-                    const { data: events, error } = await sb
-                        .from('events')
+                    const { data: coupons, error } = await sb
+                        .from('coupons')
                         .select('*')
-                        .order('start_date', { ascending: true });
+                        .order('created_at', { ascending: false });
 
                     if (error) throw error;
 
-                    if (!events || events.length === 0) {
-                        container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500 border border-dashed border-[#e6d5c3] rounded-xl bg-[#faf8f5]">현재 예정된 행사가 없습니다.</div>';
+                    if (!coupons || coupons.length === 0) {
+                        container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-6 text-gray-500 text-sm">현재 등록된 쿠폰이 없습니다.</div>';
                         return;
                     }
 
-                    container.innerHTML = events.slice(0, 3).map(ev => {
-                        let tagColor = 'bg-[#8c4a32]/10 text-[#8c4a32]';
-                        if (ev.category === '전시') tagColor = 'bg-amber-600/10 text-amber-700';
-                        if (ev.category === '공연' || ev.category === '팝업·플리마켓') tagColor = 'bg-emerald-600/10 text-emerald-700';
+                    const today = getTodayKst();
 
-                        const safeImg = ev.image_url && /^https?:\/\//.test(ev.image_url) ? esc(ev.image_url) : '';
-                        const topMedia = safeImg
-                            ? `<img src="${safeImg}" alt="${esc(ev.title)}" class="w-full h-full object-cover">`
-                            : `<span class="font-batang font-bold text-[#8c4a32] text-base line-clamp-2 px-4 text-center">${esc(ev.title)}</span>`;
+                    container.innerHTML = coupons.slice(0, 6).map(cp => {
+                        const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+                        const total = hasLimit ? Number(cp.total_quantity) : null;
+                        const issued = cp.issued_quantity ?? 0;
+                        const remaining = hasLimit ? Math.max(0, total - issued) : null;
+                        const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
+                        const isSoldOut = hasLimit && remaining === 0;
+                        const isClosed = isExpired || isSoldOut;
+                        const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
+                        const validText = cp.valid_until ? `${cp.valid_until.replace(/-/g, '.')}까지` : '상시 사용';
+
+                        const statusBadge = isExpired
+                            ? `<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">${hasLimit ? '기간 만료' : `만료 · ${issued}명 다운`}</span>`
+                            : (isSoldOut
+                                ? '<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">선착순 마감</span>'
+                                : (hasLimit
+                                    ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">선착순 ${remaining}개 남음</span>`
+                                    : `<span class="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">${cp.valid_until ? '유효기간' : '상시'} · ${issued}명 다운</span>`));
 
                         return `
-                            <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8] hover:shadow-md transition text-left">
-                                <div class="h-40 bg-[#f4ebd9] flex items-center justify-center overflow-hidden">
-                                    ${topMedia}
+                            <a href="coupons.html" class="block bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8] hover:shadow-md transition ${isClosed ? 'opacity-75' : ''}">
+                                ${safeImg ? `<img src="${safeImg}" alt="${esc(cp.store_name)}" class="w-full h-40 object-cover">` : ''}
+                                <div class="p-4">
+                                    <div class="flex items-center justify-between gap-2 mb-2">
+                                        <span class="inline-block text-xs bg-[#8c4a32] text-white px-2.5 py-0.5 rounded-full font-semibold">${esc(cp.discount_info)}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <h4 class="font-bold text-base font-batang text-[#2f261f] truncate">${esc(cp.store_name)}</h4>
+                                    <p class="text-[11px] text-[#8c4a32] font-semibold mt-1">📅 ${esc(validText)}</p>
+                                    ${cp.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-2">${esc(cp.description)}</p>` : ''}
                                 </div>
-                                <div class="p-5">
-                                    <span class="text-xs ${tagColor} px-2.5 py-1 rounded-md font-semibold">${esc(ev.category || '행사')}</span>
-                                    <h3 class="font-bold text-lg mt-2 font-batang truncate">${esc(ev.title)}</h3>
-                                    <p class="text-xs text-gray-500 mt-1 truncate">📍 ${esc(ev.location || '경주시 일원')}</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">🕒 ${esc(ev.start_date || '일정 미정')} ~ ${esc(ev.end_date || '')}</p>
-                                    ${ev.description ? `<p class="text-xs text-gray-600 mt-2 line-clamp-2">${esc(ev.description)}</p>` : ''}
-                                </div>
-                            </div>
+                            </a>
                         `;
                     }).join('');
                 } catch (error) {
-                    console.error('행사 불러오기 실패:', error);
-                    container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500">행사 정보를 불러오지 못했습니다.</div>';
+                    console.error('쿠폰 목록 불러오기 실패:', error);
+                    container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-6 text-gray-500 text-sm">쿠폰북을 보려면 아래 버튼을 눌러주세요.</div>';
                 }
             }
 
