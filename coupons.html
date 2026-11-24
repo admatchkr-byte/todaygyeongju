@@ -210,7 +210,7 @@
             }
         }
 
-        function renderCoupons() {
+      function renderCoupons() {
             const grid = document.getElementById('couponGrid');
             const today = getTodayKst();
 
@@ -232,7 +232,7 @@
                 let badgeClass = hasLimit ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100';
                 let statusText = hasLimit
                     ? `🎟️ 선착순 ${remaining}개 남음 / ${total}개`
-                    : (cp.valid_until ? '📅 유효기간 내 사용 가능' : '✨ 상시 사용 가능');
+                    : `📥 현재 ${issued}명 다운로드 · ${cp.valid_until ? '유효기간 내 사용 가능' : '상시 사용 가능'}`;
                 let btnText = '쿠폰 받기 📥';
                 let btnDisabled = false;
 
@@ -242,7 +242,9 @@
                 } else if (isExpired) {
                     badgeText = '기간 만료';
                     badgeClass = 'text-rose-700 bg-rose-100';
-                    statusText = '⏰ 유효기간이 종료되어 마감됐습니다';
+                    statusText = hasLimit
+                        ? `⏰ 유효기간 만료 (발급 ${issued}명 / ${total}개)`
+                        : `⏰ 유효기간 만료 (총 ${issued}명 다운로드)`;
                     btnText = '마감됐습니다 🔒';
                     btnDisabled = true;
                 } else if (isSoldOut) {
