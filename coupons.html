@@ -73,7 +73,8 @@
                 <span id="modalCode" class="inline-block text-xs font-mono bg-[#f4ebd9] text-[#8c4a32] px-3 py-1 rounded-full border border-[#e6d5c3] mb-3 font-bold"></span>
                 <h3 id="modalName" class="text-2xl font-bold font-batang text-[#2c2522] mb-2"></h3>
 
-                <div id="modalDiscount" class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl py-3 px-4 mb-4 font-bold text-lg"></div>
+                <div id="modalDiscount" class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl py-3 px-4 mb-2 font-bold text-lg"></div>
+                <p id="modalExpiry" class="text-xs text-gray-500 mb-4"></p>
 
                 <p id="modalStatus" class="text-sm text-[#8c4a32] font-semibold mb-4"></p>
 
@@ -101,6 +102,13 @@
 
         const esc = (s = '') =>
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        const getTodayKst = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+        const formatValidUntil = (dateStr) => {
+            if (!dateStr) return '상시 사용 가능';
+            return `${dateStr.replace(/-/g, '.')}까지 사용 가능`;
+        };
 
         function getDeviceId() {
             const key = 'todaygyeongju_device_id';
@@ -155,21 +163,27 @@
 
         function renderCoupons() {
             const grid = document.getElementById('couponGrid');
+            const today = getTodayKst();
 
             grid.innerHTML = couponList.map(cp => {
                 const total = cp.total_quantity ?? 50;
                 const issued = cp.issued_quantity ?? 0;
                 const remaining = Math.max(0, total - issued);
                 const percent = total > 0 ? (remaining / total) * 100 : 0;
+                const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
                 const myClaim = getMyClaim(cp.id);
                 const isClaiming = claiming.has(cp.id);
                 const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
+                const validText = formatValidUntil(cp.valid_until);
 
                 let btnText = '쿠폰 받기 📥';
                 let btnDisabled = false;
 
                 if (isClaiming) {
                     btnText = '발급 처리 중...';
+                    btnDisabled = true;
+                } else if (isExpired) {
+                    btnText = '사용 기간 만료 🔒';
                     btnDisabled = true;
                 } else if (myClaim) {
                     btnText = '내 쿠폰 다시 보기 📥';
@@ -179,11 +193,11 @@
                 }
 
                 return `
-                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-6 shadow-sm flex flex-col justify-between ${isExpired ? 'opacity-70' : ''}">
                         <div>
                             <div class="flex justify-between items-center mb-3 gap-2">
-                                <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded">
-                                    선착순 쿠폰
+                                <span class="text-xs font-bold ${isExpired ? 'text-rose-700 bg-rose-100' : 'text-emerald-700 bg-emerald-100'} px-2.5 py-1 rounded">
+                                    ${isExpired ? '기간 만료' : '선착순 쿠폰'}
                                 </span>
                                 <span class="text-base font-bold text-[#8c4a32] text-right">
                                     ${esc(cp.discount_info)}
@@ -191,15 +205,16 @@
                             </div>
                             ${safeImg ? `<img src="${safeImg}" alt="${esc(cp.store_name)}" class="w-full h-44 object-cover rounded-xl border border-[#e8e2d8] mb-4">` : ''}
                             <h3 class="font-batang font-bold text-xl mb-1">${esc(cp.store_name)}</h3>
+                            <p class="text-xs font-semibold text-[#8c4a32] mb-1">📅 유효기간: ${esc(validText)}</p>
                             <p class="text-xs text-gray-500 mb-4">${esc(cp.description || '매장 방문 시 쿠폰을 제시해 주세요.')}</p>
                         </div>
 
                         <div>
                             <p class="text-sm font-bold text-[#8c4a32] mb-2">
-                                ${remaining > 0 ? `🎟️ 선착순 ${remaining}개 남음 / ${total}개` : '🔒 한정 수량이 모두 소진되었습니다'}
+                                ${isExpired ? '⏰ 유효기간이 종료된 쿠폰입니다' : (remaining > 0 ? `🎟️ 선착순 ${remaining}개 남음 / ${total}개` : '🔒 한정 수량이 모두 소진되었습니다')}
                             </p>
                             <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-4">
-                                <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${percent}%"></div>
+                                <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${isExpired ? 0 : percent}%"></div>
                             </div>
                             <button
                                 onclick="handleCouponClick(${cp.id})"
@@ -216,6 +231,12 @@
         async function handleCouponClick(couponId) {
             const cp = couponList.find(item => item.id === couponId);
             if (!cp || claiming.has(couponId)) return;
+
+            if (cp.valid_until && getTodayKst() > cp.valid_until) {
+                alert('유효기간이 지난 쿠폰입니다.');
+                await loadCoupons();
+                return;
+            }
 
             const saved = getMyClaim(couponId);
             if (saved) {
@@ -235,7 +256,9 @@
                 if (error) throw error;
 
                 if (!data || !data.success) {
-                    if (data && data.error === 'SOLD_OUT') {
+                    if (data && data.error === 'EXPIRED') {
+                        alert('유효기간이 만료된 쿠폰입니다.');
+                    } else if (data && data.error === 'SOLD_OUT') {
                         alert('아쉽지만 선착순 수량이 모두 소진되었습니다.');
                     } else {
                         alert('쿠폰을 발급하지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -304,8 +327,13 @@
 
             ctx.fillStyle = '#555555';
             ctx.font = 'bold 34px monospace';
-            ctx.fillText('발급번호 #' + String(claimId).padStart(4, '0'), 540, 960);
+            ctx.fillText('발급번호 #' + String(claimId).padStart(4, '0'), 540, 940);
 
+            ctx.fillStyle = '#8c4a32';
+            ctx.font = 'bold 30px Pretendard, sans-serif';
+            ctx.fillText('유효기간: ' + formatValidUntil(cp.valid_until), 540, 1030, 850);
+
+            ctx.fillStyle = '#555555';
             ctx.font = '28px Pretendard, sans-serif';
             ctx.fillText('매장 직원에게 쿠폰을 보여주세요.', 540, 1180, 850);
 
@@ -328,6 +356,7 @@
             document.getElementById('modalCode').innerText = '발급번호 #' + String(claimRecord.claim_id).padStart(4, '0');
             document.getElementById('modalName').innerText = cp.store_name;
             document.getElementById('modalDiscount').innerText = '🎉 ' + cp.discount_info;
+            document.getElementById('modalExpiry').innerText = '📅 유효기간: ' + formatValidUntil(cp.valid_until);
             document.getElementById('modalStatus').innerText = '쿠폰 이미지를 준비하고 있습니다...';
 
             const imgEl = document.getElementById('couponImage');
