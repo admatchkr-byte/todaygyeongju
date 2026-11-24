@@ -30,13 +30,17 @@
     }
     textarea { resize: vertical; min-height: 80px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+    .btn-row button { margin-top: 0; }
     button {
       background: var(--accent); color: #fff; border: none; border-radius: 8px;
       padding: 11px 18px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px;
     }
     button:hover { background: var(--accent-hover); }
     button.secondary { background: #eee6dc; color: var(--text); margin-top: 0; }
+    button.edit { background: #6b5b4d; padding: 6px 12px; font-size: 12px; margin-top: 0; }
     button.danger { background: #c94a4a; padding: 6px 12px; font-size: 12px; margin-top: 0; }
+    .actions { display: flex; gap: 6px; flex-shrink: 0; }
     .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
     .tab-btn { margin-top: 0; background: #eee6dc; color: var(--text); }
     .tab-btn.active { background: var(--accent); color: #fff; }
@@ -50,8 +54,12 @@
       display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
       background: #f3e8dc; color: var(--accent); font-weight: 700; margin-right: 6px;
     }
+    .badge-expired {
+      background: #fde8e8; color: #b91c1c;
+    }
     .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
     .msg { font-size: 13px; margin-top: 10px; color: var(--accent); font-weight: 600; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -128,8 +136,8 @@
 
       <!-- 쿠폰 관리 탭 -->
       <div id="coupons-tab" class="hidden">
-        <div class="card">
-          <h2>새 쿠폰 등록</h2>
+        <div class="card" id="coupon-form-card">
+          <h2 id="cp-form-title">새 쿠폰 등록</h2>
           <form id="coupon-form">
             <div class="row">
               <div>
@@ -157,11 +165,17 @@
                 <input type="number" id="cp-qty" min="1" value="50" required />
               </div>
             </div>
+            <label>유효기간 마감일 (비워두면 상시 사용 가능)</label>
+            <input type="date" id="cp-valid-until" />
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
             <label>쿠폰 이미지 업로드</label>
             <input type="file" id="cp-image" accept="image/*" />
-            <button type="submit">쿠폰 등록하기</button>
+            <div id="cp-image-hint" class="hint hidden"></div>
+            <div class="btn-row">
+              <button type="submit" id="cp-submit-btn">쿠폰 등록하기</button>
+              <button type="button" id="cp-cancel-btn" class="secondary hidden">수정 취소</button>
+            </div>
             <div id="cp-msg" class="msg"></div>
           </form>
         </div>
@@ -179,8 +193,14 @@
     const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let couponsCache = [];
+    let editingCouponId = null;
+    let editingImageUrl = '';
+
     const escapeHtml = (str = '') =>
       String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+
+    const getTodayKst = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     // 탭 전환
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -204,6 +224,25 @@
     });
     qtyInput.addEventListener('input', () => {
       qtyPreset.value = ['10', '30', '50', '100'].includes(qtyInput.value) ? qtyInput.value : 'custom';
+    });
+
+    // 쿠폰 폼 초기화 (등록 모드로 복귀)
+    function resetCouponForm() {
+      editingCouponId = null;
+      editingImageUrl = '';
+      document.getElementById('coupon-form').reset();
+      qtyPreset.value = '50';
+      qtyInput.value = '50';
+      document.getElementById('cp-form-title').textContent = '새 쿠폰 등록';
+      document.getElementById('cp-submit-btn').textContent = '쿠폰 등록하기';
+      document.getElementById('cp-cancel-btn').classList.add('hidden');
+      document.getElementById('cp-image-hint').classList.add('hidden');
+      document.getElementById('cp-image-hint').textContent = '';
+    }
+
+    document.getElementById('cp-cancel-btn').addEventListener('click', () => {
+      resetCouponForm();
+      document.getElementById('cp-msg').textContent = '';
     });
 
     // 로그인 상태 확인
@@ -295,37 +334,82 @@
       const { data, error } = await sb.from('coupons').select('*').order('created_at', { ascending: false });
       const list = document.getElementById('coupons-list');
       if (error) return (list.textContent = '불러오기 실패: ' + error.message);
-      if (!data.length) return (list.textContent = '등록된 쿠폰이 없습니다.');
+      if (!data.length) {
+        couponsCache = [];
+        return (list.textContent = '등록된 쿠폰이 없습니다.');
+      }
+
+      couponsCache = data;
+      const today = getTodayKst();
 
       list.innerHTML = data.map(cp => {
         const total = cp.total_quantity ?? 50;
         const issued = cp.issued_quantity ?? 0;
         const remaining = Math.max(0, total - issued);
+        const isExpired = cp.valid_until && today > cp.valid_until;
+        const validText = cp.valid_until ? `~ ${cp.valid_until}까지` : '상시 사용';
+
         return `
           <div class="item">
             ${cp.image_url ? `<img class="thumb" src="${escapeHtml(cp.image_url)}" alt="">` : ''}
             <div class="item-info">
               <div>
                 <span class="badge">${escapeHtml(cp.discount_info)}</span>
+                ${isExpired ? `<span class="badge badge-expired">기간 만료</span>` : ''}
                 <strong>${escapeHtml(cp.store_name)}</strong>
               </div>
               <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
-                남은 수량: <strong>${remaining}개</strong> / 총 ${total}개 · ${escapeHtml(cp.description || '설명 없음')}
+                남은 수량: <strong>${remaining}개</strong> / 총 ${total}개 · 유효기간: <strong>${escapeHtml(validText)}</strong>
               </div>
+              ${cp.description ? `<div style="font-size:12px;color:#8d7f70;margin-top:2px;">${escapeHtml(cp.description)}</div>` : ''}
             </div>
-            <button class="danger" onclick="deleteCoupon(${cp.id})">삭제</button>
+            <div class="actions">
+              <button class="edit" onclick="editCoupon(${cp.id})">수정</button>
+              <button class="danger" onclick="deleteCoupon(${cp.id})">삭제</button>
+            </div>
           </div>
         `;
       }).join('');
     }
 
-    // 쿠폰 등록 (이미지 업로드 + 한정 수량)
+    // 쿠폰 수정 시작
+    window.editCoupon = (id) => {
+      const cp = couponsCache.find(item => item.id === id);
+      if (!cp) return;
+
+      editingCouponId = cp.id;
+      editingImageUrl = cp.image_url || '';
+
+      document.getElementById('cp-store').value = cp.store_name || '';
+      document.getElementById('cp-discount').value = cp.discount_info || '';
+      const qtyVal = String(cp.total_quantity ?? 50);
+      qtyInput.value = qtyVal;
+      qtyPreset.value = ['10', '30', '50', '100'].includes(qtyVal) ? qtyVal : 'custom';
+      document.getElementById('cp-valid-until').value = cp.valid_until || '';
+      document.getElementById('cp-desc').value = cp.description || '';
+      document.getElementById('cp-image').value = '';
+
+      document.getElementById('cp-form-title').textContent = `쿠폰 수정 (${cp.store_name})`;
+      document.getElementById('cp-submit-btn').textContent = '수정 저장하기';
+      document.getElementById('cp-cancel-btn').classList.remove('hidden');
+
+      const hint = document.getElementById('cp-image-hint');
+      hint.textContent = editingImageUrl
+        ? '새 파일을 선택하지 않으면 기존 쿠폰 이미지가 그대로 유지됩니다.'
+        : '현재 등록된 이미지가 없습니다. 필요하면 이미지를 선택해 주세요.';
+      hint.classList.remove('hidden');
+
+      document.getElementById('cp-msg').textContent = '';
+      document.getElementById('coupon-form-card').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // 쿠폰 등록 및 수정 저장
     document.getElementById('coupon-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('cp-msg');
       msg.textContent = '저장 중...';
 
-      let imageUrl = '';
+      let imageUrl = editingCouponId ? editingImageUrl : '';
       const file = document.getElementById('cp-image').files[0];
 
       if (file) {
@@ -338,7 +422,8 @@
         imageUrl = urlData.publicUrl;
       }
 
-      const totalQty = Math.max(1, parseInt(document.getElementById('cp-qty').value, 10) || 50);
+      const totalQty = Math.max(1, parseInt(qtyInput.value, 10) || 50);
+      const validUntil = document.getElementById('cp-valid-until').value || null;
 
       const payload = {
         store_name: document.getElementById('cp-store').value.trim(),
@@ -346,16 +431,22 @@
         description: document.getElementById('cp-desc').value.trim(),
         image_url: imageUrl,
         total_quantity: totalQty,
-        issued_quantity: 0
+        valid_until: validUntil
       };
 
-      const { error } = await sb.from('coupons').insert([payload]);
-      if (error) return (msg.textContent = '등록 실패: ' + error.message);
+      let error;
+      if (editingCouponId) {
+        ({ error } = await sb.from('coupons').update(payload).eq('id', editingCouponId));
+      } else {
+        payload.issued_quantity = 0;
+        ({ error } = await sb.from('coupons').insert([payload]));
+      }
 
-      e.target.reset();
-      qtyPreset.value = '50';
-      qtyInput.value = '50';
-      msg.textContent = '쿠폰이 등록되었습니다!';
+      if (error) return (msg.textContent = '저장 실패: ' + error.message);
+
+      const wasEditing = !!editingCouponId;
+      resetCouponForm();
+      msg.textContent = wasEditing ? '쿠폰이 수정되었습니다!' : '쿠폰이 등록되었습니다!';
       loadCoupons();
     });
 
@@ -364,7 +455,10 @@
       if (!confirm('이 쿠폰을 삭제할까요?')) return;
       const { error } = await sb.from('coupons').delete().eq('id', id);
       if (error) alert('삭제 실패: ' + error.message);
-      else loadCoupons();
+      else {
+        if (editingCouponId === id) resetCouponForm();
+        loadCoupons();
+      }
     };
 
     checkAuth();
