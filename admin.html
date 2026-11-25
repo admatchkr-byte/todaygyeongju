@@ -42,7 +42,7 @@
     button.edit { background: #6b5b4d; padding: 6px 12px; font-size: 12px; margin-top: 0; }
     button.danger { background: #c94a4a; padding: 6px 12px; font-size: 12px; margin-top: 0; }
     .actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
     .tab-btn { margin-top: 0; background: #eee6dc; color: var(--text); }
     .tab-btn.active { background: var(--accent); color: #fff; }
     .item {
@@ -50,7 +50,7 @@
       padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px;
     }
     .item:last-child { border-bottom: none; }
-    .item-info { flex: 1; }
+    .item-info { flex: 1; min-width: 0; }
     .badge {
       display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
       background: #f3e8dc; color: var(--accent); font-weight: 700; margin-right: 6px;
@@ -65,7 +65,6 @@
     .msg { font-size: 13px; margin-top: 10px; color: var(--accent); font-weight: 600; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
-    /* 사진 순서 정렬 카드 스타일 */
     .preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
     .preview-card {
       position: relative; width: 92px; background: #fff; border: 1px solid var(--border);
@@ -124,6 +123,7 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="events-tab">행사 관리</button>
         <button class="tab-btn" data-tab="coupons-tab">쿠폰 관리</button>
+        <button class="tab-btn" data-tab="community-tab">채팅/게시판 관리</button>
       </div>
 
       <!-- 행사 관리 탭 -->
@@ -222,7 +222,6 @@
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
 
-            <!-- 1. 매장/음식 대표 사진 (최대 5장 + 순서 정렬) -->
             <div class="upload-box">
               <label>1. 매장 / 음식 대표 사진 업로드 (최대 5장 · ◀ ▶ 버튼이나 드래그로 순서 변경)</label>
               <input type="file" id="cp-store-images" accept="image/*" multiple />
@@ -230,7 +229,6 @@
               <div id="cp-store-images-preview" class="preview-grid"></div>
             </div>
 
-            <!-- 2. 실제 쿠폰 이미지 (쿠폰 받기 클릭 시 팝업에 표시) -->
             <div class="upload-box">
               <label>2. 쿠폰 이미지 업로드 (쿠폰 받기를 눌렀을 때 팝업에 뜨는 이미지 · 1장)</label>
               <input type="file" id="cp-image" accept="image/*" />
@@ -251,6 +249,25 @@
           <div id="coupons-list">불러오는 중...</div>
         </div>
       </div>
+
+      <!-- 채팅/게시판 관리 탭 -->
+      <div id="community-tab" class="hidden">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+            <h2 style="border:none; padding:0; margin:0;">💬 최근 실시간 채팅 (최신 30건)</h2>
+            <button type="button" class="secondary" style="padding:6px 12px; font-size:12px;" onclick="loadAdminChats()">새로고침</button>
+          </div>
+          <div id="admin-chats-list">불러오는 중...</div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+            <h2 style="border:none; padding:0; margin:0;">📝 자유게시판 글 관리</h2>
+            <button type="button" class="secondary" style="padding:6px 12px; font-size:12px;" onclick="loadAdminPosts()">새로고침</button>
+          </div>
+          <div id="admin-posts-list">불러오는 중...</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -265,7 +282,6 @@
 
     let couponsCache = [];
     let editingCouponId = null;
-    // 매장 사진 항목: { type: 'url', url } 또는 { type: 'file', file, previewUrl }
     let storePhotoItems = [];
     let dragSourceIndex = null;
     let editingCouponImageUrl = '';
@@ -282,6 +298,11 @@
         btn.classList.add('active');
         document.getElementById('events-tab').classList.toggle('hidden', btn.dataset.tab !== 'events-tab');
         document.getElementById('coupons-tab').classList.toggle('hidden', btn.dataset.tab !== 'coupons-tab');
+        document.getElementById('community-tab').classList.toggle('hidden', btn.dataset.tab !== 'community-tab');
+        if (btn.dataset.tab === 'community-tab') {
+          loadAdminChats();
+          loadAdminPosts();
+        }
       });
     });
 
@@ -328,7 +349,6 @@
       storePhotoItems = [];
     }
 
-    // 매장 사진 미리보기 및 순서 정렬 UI
     function renderStoreImagePreviews() {
       const box = document.getElementById('cp-store-images-preview');
       const hint = document.getElementById('cp-store-images-hint');
@@ -354,7 +374,6 @@
         `;
       }).join('');
 
-      // 드래그 앤 드롭 순서 변경 이벤트
       box.querySelectorAll('.preview-card').forEach(card => {
         card.addEventListener('dragstart', (e) => {
           dragSourceIndex = Number(card.dataset.idx);
@@ -443,7 +462,6 @@
       renderCouponImagePreview();
     };
 
-    // 행사 폼 초기화
     function resetEventForm() {
       editingEventId = null;
       editingEventImageUrl = '';
@@ -460,7 +478,6 @@
       document.getElementById('ev-msg').textContent = '';
     });
 
-    // 쿠폰 폼 초기화
     function resetCouponForm() {
       editingCouponId = null;
       clearStorePhotoItems();
@@ -483,7 +500,6 @@
       document.getElementById('cp-msg').textContent = '';
     });
 
-    // 로그인 상태 확인
     async function checkAuth() {
       const { data: { session } } = await sb.auth.getSession();
       const loggedIn = !!session;
@@ -496,7 +512,6 @@
       }
     }
 
-    // 로그인
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value.trim();
@@ -510,13 +525,11 @@
       }
     });
 
-    // 로그아웃
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await sb.auth.signOut();
       checkAuth();
     });
 
-    // 행사 불러오기
     async function loadEvents() {
       const { data, error } = await sb.from('events').select('*').order('created_at', { ascending: false });
       const list = document.getElementById('events-list');
@@ -544,7 +557,6 @@
       `).join('');
     }
 
-    // 행사 수정 시작
     window.editEvent = (id) => {
       const ev = eventsCache.find(item => item.id === id);
       if (!ev) return;
@@ -574,7 +586,6 @@
       document.getElementById('event-form-card').scrollIntoView({ behavior: 'smooth' });
     };
 
-    // 행사 등록 및 수정 저장
     document.getElementById('event-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('ev-msg');
@@ -618,7 +629,6 @@
       loadEvents();
     });
 
-    // 행사 삭제
     window.deleteEvent = async (id) => {
       if (!confirm('이 행사를 삭제할까요?')) return;
       const { error } = await sb.from('events').delete().eq('id', id);
@@ -629,7 +639,6 @@
       }
     };
 
-    // 쿠폰 불러오기
     async function loadCoupons() {
       const { data, error } = await sb.from('coupons').select('*').order('created_at', { ascending: false });
       const list = document.getElementById('coupons-list');
@@ -682,7 +691,6 @@
       }).join('');
     }
 
-    // 쿠폰 수정 시작
     window.editCoupon = (id) => {
       const cp = couponsCache.find(item => item.id === id);
       if (!cp) return;
@@ -734,14 +742,12 @@
       return data.publicUrl;
     }
 
-    // 쿠폰 등록 및 수정 저장
     document.getElementById('coupon-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('cp-msg');
       msg.textContent = '저장 중...';
 
       try {
-        // 1. 정해진 순서대로 매장 대표 사진 업로드 및 URL 배열 생성
         const finalStoreImages = [];
         for (const item of storePhotoItems.slice(0, 5)) {
           if (item.type === 'url') {
@@ -752,7 +758,6 @@
           }
         }
 
-        // 2. 실제 쿠폰 이미지 업로드 (1장)
         let couponImageUrl = editingCouponImageUrl;
         const couponFile = document.getElementById('cp-image').files[0];
         if (couponFile) {
@@ -792,7 +797,6 @@
       }
     });
 
-    // 쿠폰 삭제
     window.deleteCoupon = async (id) => {
       if (!confirm('이 쿠폰을 삭제할까요?')) return;
       const { error } = await sb.from('coupons').delete().eq('id', id);
@@ -801,6 +805,77 @@
         if (editingCouponId === id) resetCouponForm();
         loadCoupons();
       }
+    };
+
+    // 채팅 & 자유게시판 관리자 삭제 기능
+    window.loadAdminChats = async () => {
+      const box = document.getElementById('admin-chats-list');
+      const { data, error } = await sb
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (error) return (box.textContent = '불러오기 실패: ' + error.message);
+      if (!data.length) return (box.textContent = '등록된 채팅 메시지가 없습니다.');
+
+      box.innerHTML = data.map(m => `
+        <div class="item">
+          <div class="item-info">
+            <div>
+              <strong>${escapeHtml(m.nickname)}</strong>
+              <span style="font-size:11px;color:#7a6c5d;margin-left:6px;">${new Date(m.created_at).toLocaleString('ko-KR')}</span>
+            </div>
+            <div style="font-size:13px;color:#2f261f;margin-top:4px;word-break:break-word;">${escapeHtml(m.message)}</div>
+          </div>
+          <div class="actions">
+            <button class="danger" onclick="deleteAdminChat(${m.id})">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.deleteAdminChat = async (id) => {
+      if (!confirm('이 채팅 메시지를 삭제할까요?')) return;
+      const { error } = await sb.from('chat_messages').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else loadAdminChats();
+    };
+
+    window.loadAdminPosts = async () => {
+      const box = document.getElementById('admin-posts-list');
+      const { data, error } = await sb
+        .from('board_posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) return (box.textContent = '불러오기 실패: ' + error.message);
+      if (!data.length) return (box.textContent = '등록된 게시글이 없습니다.');
+
+      box.innerHTML = data.map(p => `
+        <div class="item">
+          <div class="item-info">
+            <div>
+              <span class="badge">${escapeHtml(p.category)}</span>
+              <strong>${escapeHtml(p.title)}</strong>
+            </div>
+            <div style="font-size:12px;color:#7a6c5d;margin-top:4px;">
+              작성자: ${escapeHtml(p.nickname)} · ${new Date(p.created_at).toLocaleString('ko-KR')}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="danger" onclick="deleteAdminPost(${p.id})">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.deleteAdminPost = async (id) => {
+      if (!confirm('이 게시글과 댓글을 모두 삭제할까요?')) return;
+      const { error } = await sb.from('board_posts').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else loadAdminPosts();
     };
 
     syncCouponTypeUI();
