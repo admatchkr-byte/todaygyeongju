@@ -33,9 +33,9 @@
                 <a href="index.html" class="text-lg md:text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
                 <span class="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    실시간 채팅
+                    <span id="onlineCountText">1명 접속 중</span>
                 </span>
-                <span id="adminBadge" class="hidden text-[11px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">관리자 모드</span>
+                <span id="adminBadge" class="hidden text-[11px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">관리자</span>
             </div>
             <div class="flex items-center gap-3 text-xs md:text-sm font-semibold">
                 <a href="board.html" class="text-[#6b5b4d] hover:text-[#8c4a32]">자유게시판</a>
@@ -99,9 +99,13 @@
         const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const renderedIds = new Set();
+        const renderedMessages = new Map(); // id -> msg object
         let lastSentAt = 0;
         let isAdmin = false;
+        let chatChannel = null;
+        let myLastReadId = 0;
+        // device_id -> { last_read_id, sender_id }
+        let onlinePeers = new Map();
 
         const esc = (s = '') =>
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -151,6 +155,58 @@
             return `${h}:${m}`;
         }
 
+        // 특정 메시지를 읽은 다른 접속자 수 계산
+        function getReadCount(msg) {
+            let count = 0;
+            onlinePeers.forEach((info, peerDeviceId) => {
+                if (peerDeviceId === msg.device_id) return; // 보낸 사람 본인 제외
+                if ((info.last_read_id || 0) >= msg.id) {
+                    count += 1;
+                }
+            });
+            return count;
+        }
+
+        // 모든 말풍선의 "N명 읽음" 표시 갱신
+        function refreshAllReadIndicators() {
+            renderedMessages.forEach((msg, id) => {
+                const badge = document.getElementById(`read-${id}`);
+                if (!badge) return;
+                const cnt = getReadCount(msg);
+                badge.textContent = cnt > 0 ? `${cnt}명 읽음` : '';
+            });
+        }
+
+        async function syncMyPresence() {
+            if (!chatChannel) return;
+            try {
+                await chatChannel.track({
+                    device_id: getDeviceId(),
+                    last_read_id: document.hidden ? myLastReadId : getMaxMessageId(),
+                    updated_at: Date.now()
+                });
+            } catch (e) {
+                console.error('Presence sync error:', e);
+            }
+        }
+
+        function getMaxMessageId() {
+            let maxId = myLastReadId;
+            renderedMessages.forEach((_, id) => {
+                if (id > maxId) maxId = id;
+            });
+            return maxId;
+        }
+
+        function markAsReadIfVisible() {
+            if (document.hidden) return;
+            const latest = getMaxMessageId();
+            if (latest > myLastReadId) {
+                myLastReadId = latest;
+                syncMyPresence();
+            }
+        }
+
         window.deleteChatMessage = async (id) => {
             if (!isAdmin) return;
             if (!confirm('이 채팅 메시지를 삭제할까요?')) return;
@@ -161,15 +217,16 @@
             }
             const el = document.getElementById(`msg-${id}`);
             if (el) el.remove();
-            renderedIds.delete(id);
+            renderedMessages.delete(id);
         };
 
         function appendMessage(msg, autoScroll = true) {
-            if (!msg || renderedIds.has(msg.id)) return;
-            renderedIds.add(msg.id);
+            if (!msg || renderedMessages.has(msg.id)) return;
+            const wasEmpty = renderedMessages.size === 0;
+            renderedMessages.set(msg.id, msg);
 
             const box = document.getElementById('chatBox');
-            if (renderedIds.size === 1) {
+            if (wasEmpty) {
                 box.innerHTML = '';
             }
 
@@ -182,11 +239,17 @@
                 ? `<button type="button" onclick="deleteChatMessage(${msg.id})" class="text-[10px] text-rose-600 hover:underline font-bold shrink-0">삭제</button>`
                 : '';
 
+            const initialRead = getReadCount(msg);
+            const readText = initialRead > 0 ? `${initialRead}명 읽음` : '';
+
             row.innerHTML = isMine
                 ? `
                     <div class="flex items-end gap-1.5 max-w-[82%]">
                         ${adminDelBtn}
-                        <span class="text-[10px] text-gray-400 shrink-0">${formatTime(msg.created_at)}</span>
+                        <div class="flex flex-col items-end shrink-0 leading-tight">
+                            <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
+                            <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
+                        </div>
                         <div class="bg-[#8c4a32] text-white rounded-2xl rounded-tr-sm px-3.5 py-2 text-sm leading-relaxed break-words shadow-xs">
                             ${esc(msg.message)}
                         </div>
@@ -198,7 +261,10 @@
                         <div class="bg-[#f6f1ea] text-[#2c2522] border border-[#e6d5c3] rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm leading-relaxed break-words">
                             ${esc(msg.message)}
                         </div>
-                        <span class="text-[10px] text-gray-400 shrink-0">${formatTime(msg.created_at)}</span>
+                        <div class="flex flex-col items-start shrink-0 leading-tight">
+                            <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
+                            <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
+                        </div>
                         ${adminDelBtn}
                     </div>
                 `;
@@ -207,6 +273,7 @@
             if (autoScroll) {
                 box.scrollTop = box.scrollHeight;
             }
+            markAsReadIfVisible();
         }
 
         async function loadRecentMessages() {
@@ -229,11 +296,20 @@
 
             data.reverse().forEach(m => appendMessage(m, false));
             box.scrollTop = box.scrollHeight;
+            myLastReadId = getMaxMessageId();
         }
 
         function subscribeRealtime() {
             const statusEl = document.getElementById('connStatus');
-            sb.channel('public:chat_messages')
+            const onlineTextEl = document.getElementById('onlineCountText');
+
+            chatChannel = sb.channel('todaygyeongju_live_chat', {
+                config: {
+                    presence: { key: getDeviceId() }
+                }
+            });
+
+            chatChannel
                 .on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -245,13 +321,32 @@
                     (payload) => {
                         const el = document.getElementById(`msg-${payload.old.id}`);
                         if (el) el.remove();
-                        renderedIds.delete(payload.old.id);
+                        renderedMessages.delete(payload.old.id);
                     }
                 )
-                .subscribe((status) => {
+                .on('presence', { event: 'sync' }, () => {
+                    const state = chatChannel.presenceState();
+                    const nextPeers = new Map();
+
+                    Object.entries(state).forEach(([key, presences]) => {
+                        if (!Array.isArray(presences) || presences.length === 0) return;
+                        const latest = presences[presences.length - 1];
+                        const devId = latest.device_id || key;
+                        nextPeers.set(devId, {
+                            last_read_id: Number(latest.last_read_id || 0)
+                        });
+                    });
+
+                    onlinePeers = nextPeers;
+                    const count = Math.max(1, onlinePeers.size);
+                    onlineTextEl.textContent = `${count}명 접속 중`;
+                    refreshAllReadIndicators();
+                })
+                .subscribe(async (status) => {
                     if (status === 'SUBSCRIBED') {
                         statusEl.textContent = '● 실시간 연결됨';
                         statusEl.className = 'shrink-0 font-bold text-emerald-700';
+                        await syncMyPresence();
                     } else {
                         statusEl.textContent = '● 연결 확인 중';
                         statusEl.className = 'shrink-0 font-bold text-amber-700';
@@ -297,6 +392,16 @@
                 sendBtn.disabled = false;
                 msgInput.focus();
             }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                markAsReadIfVisible();
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (chatChannel) chatChannel.untrack();
         });
 
         window.addEventListener('DOMContentLoaded', async () => {
