@@ -64,14 +64,35 @@
     .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0; }
     .msg { font-size: 13px; margin-top: 10px; color: var(--accent); font-weight: 600; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
-    .preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-    .preview-box { position: relative; width: 72px; height: 72px; }
-    .preview-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
-    .preview-box button {
+
+    /* 사진 순서 정렬 카드 스타일 */
+    .preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .preview-card {
+      position: relative; width: 92px; background: #fff; border: 1px solid var(--border);
+      border-radius: 10px; padding: 5px; cursor: grab; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .preview-card.dragging { opacity: 0.45; }
+    .preview-card.drag-over { border: 2px dashed var(--accent); transform: scale(1.03); }
+    .preview-card img { width: 100%; height: 74px; object-fit: cover; border-radius: 6px; display: block; }
+    .order-tag {
+      position: absolute; top: 8px; left: 8px; background: rgba(47, 38, 31, 0.85); color: #fff;
+      font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px;
+    }
+    .order-tag.first { background: var(--accent); }
+    .del-photo-btn {
       position: absolute; top: -6px; right: -6px; margin: 0; padding: 0;
       width: 20px; height: 20px; border-radius: 99px; background: #c94a4a;
       color: #fff; font-size: 11px; line-height: 20px; text-align: center;
     }
+    .order-controls {
+      display: flex; justify-content: space-between; gap: 4px; margin-top: 5px;
+    }
+    .order-controls button {
+      margin: 0; padding: 3px 0; flex: 1; font-size: 11px; border-radius: 5px;
+      background: #f3e8dc; color: var(--text);
+    }
+    .order-controls button:hover:not(:disabled) { background: #e3d2bf; }
+    .order-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
     .upload-box {
       background: #fcf9f4; border: 1px dashed var(--border); border-radius: 10px; padding: 12px; margin-top: 12px;
     }
@@ -201,11 +222,11 @@
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
 
-            <!-- 1. 매장/음식 대표 사진 (최대 5장) -->
+            <!-- 1. 매장/음식 대표 사진 (최대 5장 + 순서 정렬) -->
             <div class="upload-box">
-              <label>1. 매장 / 음식 대표 사진 업로드 (최대 5장 · 목록에서 옆으로 스크롤됨)</label>
+              <label>1. 매장 / 음식 대표 사진 업로드 (최대 5장 · ◀ ▶ 버튼이나 드래그로 순서 변경)</label>
               <input type="file" id="cp-store-images" accept="image/*" multiple />
-              <div id="cp-store-images-hint" class="hint">사진을 여러 장 한 번에 선택할 수 있습니다. (최대 5장)</div>
+              <div id="cp-store-images-hint" class="hint">사진을 선택한 뒤 1번(대표 사진)부터 원하는 순서대로 배치해 주세요.</div>
               <div id="cp-store-images-preview" class="preview-grid"></div>
             </div>
 
@@ -244,7 +265,9 @@
 
     let couponsCache = [];
     let editingCouponId = null;
-    let editingStoreImages = [];
+    // 매장 사진 항목: { type: 'url', url } 또는 { type: 'file', file, previewUrl }
+    let storePhotoItems = [];
+    let dragSourceIndex = null;
     let editingCouponImageUrl = '';
 
     const escapeHtml = (str = '') =>
@@ -296,27 +319,109 @@
       qtyPreset.value = ['10', '30', '50', '100'].includes(qtyInput.value) ? qtyInput.value : 'custom';
     });
 
-    // 매장 사진 / 쿠폰 이미지 미리보기 렌더
+    function clearStorePhotoItems() {
+      storePhotoItems.forEach(item => {
+        if (item.type === 'file' && item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+      storePhotoItems = [];
+    }
+
+    // 매장 사진 미리보기 및 순서 정렬 UI
     function renderStoreImagePreviews() {
       const box = document.getElementById('cp-store-images-preview');
       const hint = document.getElementById('cp-store-images-hint');
-      const remain = Math.max(0, 5 - editingStoreImages.length);
-      hint.textContent = editingStoreImages.length > 0
-        ? `현재 등록된 매장 사진 ${editingStoreImages.length}장 (추가 가능: ${remain}장)`
-        : '사진을 여러 장 한 번에 선택할 수 있습니다. (최대 5장)';
+      const remain = Math.max(0, 5 - storePhotoItems.length);
 
-      box.innerHTML = editingStoreImages.map((url, idx) => `
-        <div class="preview-box">
-          <img src="${escapeHtml(url)}" alt="매장사진 ${idx + 1}">
-          <button type="button" title="사진 제거" onclick="removeSavedStoreImage(${idx})">✕</button>
-        </div>
-      `).join('');
+      hint.textContent = storePhotoItems.length > 0
+        ? `총 ${storePhotoItems.length}장 선택됨 (추가 가능: ${remain}장) · 1번 사진이 메인 대표 사진으로 노출됩니다.`
+        : '사진을 선택한 뒤 1번(대표 사진)부터 원하는 순서대로 배치해 주세요.';
+
+      box.innerHTML = storePhotoItems.map((item, idx) => {
+        const src = item.type === 'url' ? item.url : item.previewUrl;
+        const label = idx === 0 ? '1·대표' : String(idx + 1);
+        return `
+          <div class="preview-card" draggable="true" data-idx="${idx}">
+            <span class="order-tag ${idx === 0 ? 'first' : ''}">${label}</span>
+            <img src="${escapeHtml(src)}" alt="매장사진 ${idx + 1}">
+            <button type="button" class="del-photo-btn" title="사진 제거" onclick="removeStorePhoto(${idx})">✕</button>
+            <div class="order-controls">
+              <button type="button" title="앞으로 이동" onclick="moveStorePhoto(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>◀</button>
+              <button type="button" title="뒤로 이동" onclick="moveStorePhoto(${idx}, 1)" ${idx === storePhotoItems.length - 1 ? 'disabled' : ''}>▶</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 드래그 앤 드롭 순서 변경 이벤트
+      box.querySelectorAll('.preview-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          dragSourceIndex = Number(card.dataset.idx);
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          box.querySelectorAll('.preview-card').forEach(c => c.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const targetIndex = Number(card.dataset.idx);
+          if (dragSourceIndex === null || dragSourceIndex === targetIndex) return;
+          const [moved] = storePhotoItems.splice(dragSourceIndex, 1);
+          storePhotoItems.splice(targetIndex, 0, moved);
+          dragSourceIndex = null;
+          renderStoreImagePreviews();
+        });
+      });
     }
 
-    window.removeSavedStoreImage = (idx) => {
-      editingStoreImages.splice(idx, 1);
+    window.moveStorePhoto = (idx, step) => {
+      const target = idx + step;
+      if (target < 0 || target >= storePhotoItems.length) return;
+      const [moved] = storePhotoItems.splice(idx, 1);
+      storePhotoItems.splice(target, 0, moved);
       renderStoreImagePreviews();
     };
+
+    window.removeStorePhoto = (idx) => {
+      const [removed] = storePhotoItems.splice(idx, 1);
+      if (removed && removed.type === 'file' && removed.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      renderStoreImagePreviews();
+    };
+
+    document.getElementById('cp-store-images').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      if (storePhotoItems.length + files.length > 5) {
+        alert(`매장 사진은 최대 5장까지 등록할 수 있습니다. (현재 ${storePhotoItems.length}장 선택됨)`);
+        e.target.value = '';
+        return;
+      }
+
+      files.forEach(file => {
+        storePhotoItems.push({
+          type: 'file',
+          file,
+          previewUrl: URL.createObjectURL(file)
+        });
+      });
+
+      e.target.value = '';
+      renderStoreImagePreviews();
+    });
 
     function renderCouponImagePreview() {
       const box = document.getElementById('cp-coupon-image-preview');
@@ -325,9 +430,9 @@
         return;
       }
       box.innerHTML = `
-        <div class="preview-box">
+        <div class="preview-card" style="cursor:default; width:82px;">
           <img src="${escapeHtml(editingCouponImageUrl)}" alt="쿠폰 이미지">
-          <button type="button" title="쿠폰 이미지 제거" onclick="removeSavedCouponImage()">✕</button>
+          <button type="button" class="del-photo-btn" title="쿠폰 이미지 제거" onclick="removeSavedCouponImage()">✕</button>
         </div>
       `;
     }
@@ -337,14 +442,6 @@
       document.getElementById('cp-image').value = '';
       renderCouponImagePreview();
     };
-
-    document.getElementById('cp-store-images').addEventListener('change', (e) => {
-      const files = Array.from(e.target.files || []);
-      if (editingStoreImages.length + files.length > 5) {
-        alert(`매장 사진은 최대 5장까지 등록할 수 있습니다. (현재 ${editingStoreImages.length}장 등록됨)`);
-        e.target.value = '';
-      }
-    });
 
     // 행사 폼 초기화
     function resetEventForm() {
@@ -366,7 +463,7 @@
     // 쿠폰 폼 초기화
     function resetCouponForm() {
       editingCouponId = null;
-      editingStoreImages = [];
+      clearStorePhotoItems();
       editingCouponImageUrl = '';
       document.getElementById('coupon-form').reset();
       couponTypeSelect.value = 'limited';
@@ -591,7 +688,9 @@
       if (!cp) return;
 
       editingCouponId = cp.id;
-      editingStoreImages = Array.isArray(cp.store_images) ? [...cp.store_images] : [];
+      clearStorePhotoItems();
+      const urls = Array.isArray(cp.store_images) ? cp.store_images : [];
+      urls.forEach(url => storePhotoItems.push({ type: 'url', url }));
       editingCouponImageUrl = cp.image_url || '';
 
       const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
@@ -642,17 +741,15 @@
       msg.textContent = '저장 중...';
 
       try {
-        // 1. 매장 대표 사진 업로드 (최대 5장)
-        const newStoreFiles = Array.from(document.getElementById('cp-store-images').files || []);
-        if (editingStoreImages.length + newStoreFiles.length > 5) {
-          msg.textContent = '매장 사진은 최대 5장까지만 등록할 수 있습니다.';
-          return;
-        }
-
-        const finalStoreImages = [...editingStoreImages];
-        for (const f of newStoreFiles) {
-          const url = await uploadToCouponsBucket(f, 'store');
-          finalStoreImages.push(url);
+        // 1. 정해진 순서대로 매장 대표 사진 업로드 및 URL 배열 생성
+        const finalStoreImages = [];
+        for (const item of storePhotoItems.slice(0, 5)) {
+          if (item.type === 'url') {
+            finalStoreImages.push(item.url);
+          } else if (item.type === 'file') {
+            const url = await uploadToCouponsBucket(item.file, 'store');
+            finalStoreImages.push(url);
+          }
         }
 
         // 2. 실제 쿠폰 이미지 업로드 (1장)
