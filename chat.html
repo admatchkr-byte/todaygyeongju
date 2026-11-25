@@ -20,7 +20,15 @@
         }
         #chatBox {
             height: calc(100dvh - 235px);
-            min-height: 340px;
+            min-height: 320px;
+        }
+        @keyframes stickerPop {
+            0% { transform: scale(0.75); opacity: 0.4; }
+            70% { transform: scale(1.06); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .sticker-pop {
+            animation: stickerPop 0.25s ease-out;
         }
     </style>
 </head>
@@ -56,6 +64,27 @@
             <div class="text-center text-xs text-gray-400 py-10">채팅 내역을 불러오는 중입니다...</div>
         </div>
 
+        <!-- 카카오톡 스타일 이모티콘 서랍 (열기/닫기) -->
+        <div id="emojiDrawer" class="hidden mt-2 bg-white border border-[#e6d5c3] rounded-2xl p-3 shadow-md">
+            <div class="flex items-center justify-between border-b border-[#f0e7db] pb-2 mb-2.5">
+                <div class="flex gap-1.5">
+                    <button type="button" id="tabStickerBtn" onclick="switchEmojiTab('sticker')" class="text-xs font-bold px-3 py-1 rounded-full bg-[#8c4a32] text-white transition">
+                        🏯 경주 스티커 (바로 전송)
+                    </button>
+                    <button type="button" id="tabMiniBtn" onclick="switchEmojiTab('mini')" class="text-xs font-semibold px-3 py-1 rounded-full bg-[#f4ebd9] text-[#6b5b4d] hover:bg-[#e6d5c3] transition">
+                        😊 기본 이모지
+                    </button>
+                </div>
+                <button type="button" onclick="toggleEmojiDrawer(false)" class="text-xs text-gray-400 hover:text-gray-700 px-2 py-0.5 font-bold">✕</button>
+            </div>
+
+            <!-- 1. 대형 스티커 그리드 -->
+            <div id="stickerGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto"></div>
+
+            <!-- 2. 기본 이모지 그리드 -->
+            <div id="miniEmojiGrid" class="hidden grid grid-cols-8 sm:grid-cols-10 gap-1.5 max-h-48 overflow-y-auto"></div>
+        </div>
+
         <!-- 입력 폼 -->
         <form id="chatForm" class="mt-2.5 bg-white border border-[#e8e2d8] rounded-2xl p-2.5 shadow-sm">
             <div class="flex items-center gap-2 mb-2">
@@ -73,14 +102,23 @@
                 </button>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
+                <button
+                    type="button"
+                    id="emojiToggleBtn"
+                    onclick="toggleEmojiDrawer()"
+                    title="이모티콘 열기"
+                    class="shrink-0 w-10 h-10 rounded-xl bg-[#f4ebd9] hover:bg-[#e6d5c3] text-lg flex items-center justify-center transition"
+                >
+                    😊
+                </button>
                 <input
                     type="text"
                     id="messageInput"
                     maxlength="200"
                     required
                     autocomplete="off"
-                    placeholder="메시지를 입력하세요 (최대 200자)"
+                    placeholder="메시지 입력 또는 😊 이모티콘 선택"
                     class="flex-1 bg-[#faf8f5] border border-[#e6d5c3] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#8c4a32]"
                 >
                 <button
@@ -99,12 +137,36 @@
         const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const renderedMessages = new Map(); // id -> msg object
+        const STICKER_PREFIX = '[STICKER]';
+
+        // 경주 감성 대형 스티커 12종
+        const GYEONGJU_STICKERS = [
+            { id: 'hi', emoji: '👋', label: '반가워요!' },
+            { id: 'cheom', emoji: '🏯', label: '경주 도착!' },
+            { id: 'food', emoji: '🍜', label: '맛집 인정!' },
+            { id: 'wait', emoji: '⏳', label: '웨이팅 중' },
+            { id: 'cafe', emoji: '☕', label: '카페 힐링' },
+            { id: 'photo', emoji: '📸', label: '인생샷 각' },
+            { id: 'good', emoji: '👍', label: '완전 강추!' },
+            { id: 'hot', emoji: '🔥', label: '지금 핫플' },
+            { id: 'sun', emoji: '☀️', label: '날씨 최고' },
+            { id: 'rain', emoji: '☔', label: '비 와요' },
+            { id: 'night', emoji: '✨', label: '야경 예쁨' },
+            { id: 'thanks', emoji: '🙏', label: '감사해요!' }
+        ];
+
+        // 입력창 삽입용 기본 이모지
+        const MINI_EMOJIS = [
+            '😊', '😂', '🥰', '😍', '🤩', '🥳', '😎', '🤔', '😅', '😭',
+            '❤️', '🧡', '💛', '👍', '👏', '🙌', '🙏', '🔥', '✨', '🎉',
+            '🍜', '🍲', '🍖', '☕', '🍰', '🍺', '🏯', '📸', '☀️', '☔'
+        ];
+
+        const renderedMessages = new Map();
         let lastSentAt = 0;
         let isAdmin = false;
         let chatChannel = null;
         let myLastReadId = 0;
-        // device_id -> { last_read_id, sender_id }
         let onlinePeers = new Map();
 
         const esc = (s = '') =>
@@ -147,6 +209,73 @@
             });
         }
 
+        // 이모티콘 서랍 초기화
+        function initEmojiDrawer() {
+            const stickerGrid = document.getElementById('stickerGrid');
+            stickerGrid.innerHTML = GYEONGJU_STICKERS.map(st => `
+                <button type="button" onclick="sendSticker('${st.id}')"
+                    class="flex flex-col items-center justify-center bg-[#faf8f5] hover:bg-[#f4ebd9] border border-[#ece2d4] rounded-xl py-2 px-1 transition active:scale-95">
+                    <span class="text-2xl md:text-3xl leading-none mb-1">${st.emoji}</span>
+                    <span class="text-[11px] font-bold text-[#5c4d40] truncate max-w-full">${esc(st.label)}</span>
+                </button>
+            `).join('');
+
+            const miniGrid = document.getElementById('miniEmojiGrid');
+            miniGrid.innerHTML = MINI_EMOJIS.map(em => `
+                <button type="button" onclick="insertMiniEmoji('${em}')"
+                    class="text-xl hover:bg-[#f4ebd9] rounded-lg py-1.5 transition active:scale-90">
+                    ${em}
+                </button>
+            `).join('');
+        }
+
+        window.toggleEmojiDrawer = (forceState) => {
+            const drawer = document.getElementById('emojiDrawer');
+            const btn = document.getElementById('emojiToggleBtn');
+            const shouldOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
+            drawer.classList.toggle('hidden', !shouldOpen);
+            btn.classList.toggle('bg-[#8c4a32]', shouldOpen);
+            btn.classList.toggle('text-white', shouldOpen);
+            btn.classList.toggle('bg-[#f4ebd9]', !shouldOpen);
+        };
+
+        window.switchEmojiTab = (tab) => {
+            const isSticker = tab === 'sticker';
+            document.getElementById('stickerGrid').classList.toggle('hidden', !isSticker);
+            document.getElementById('miniEmojiGrid').classList.toggle('hidden', isSticker);
+
+            document.getElementById('tabStickerBtn').className = isSticker
+                ? 'text-xs font-bold px-3 py-1 rounded-full bg-[#8c4a32] text-white transition'
+                : 'text-xs font-semibold px-3 py-1 rounded-full bg-[#f4ebd9] text-[#6b5b4d] hover:bg-[#e6d5c3] transition';
+
+            document.getElementById('tabMiniBtn').className = !isSticker
+                ? 'text-xs font-bold px-3 py-1 rounded-full bg-[#8c4a32] text-white transition'
+                : 'text-xs font-semibold px-3 py-1 rounded-full bg-[#f4ebd9] text-[#6b5b4d] hover:bg-[#e6d5c3] transition';
+        };
+
+        window.insertMiniEmoji = (emoji) => {
+            const input = document.getElementById('messageInput');
+            const start = input.selectionStart ?? input.value.length;
+            const end = input.selectionEnd ?? input.value.length;
+            input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+            input.focus();
+            const pos = start + emoji.length;
+            input.setSelectionRange(pos, pos);
+        };
+
+        window.sendSticker = async (stickerId) => {
+            const st = GYEONGJU_STICKERS.find(s => s.id === stickerId);
+            if (!st) return;
+            toggleEmojiDrawer(false);
+            await postMessageToDb(`${STICKER_PREFIX}${st.id}`);
+        };
+
+        function parseSticker(messageText) {
+            if (!messageText || !messageText.startsWith(STICKER_PREFIX)) return null;
+            const id = messageText.slice(STICKER_PREFIX.length).trim();
+            return GYEONGJU_STICKERS.find(s => s.id === id) || null;
+        }
+
         function formatTime(isoStr) {
             if (!isoStr) return '';
             const d = new Date(isoStr);
@@ -155,11 +284,10 @@
             return `${h}:${m}`;
         }
 
-        // 특정 메시지를 읽은 다른 접속자 수 계산
         function getReadCount(msg) {
             let count = 0;
             onlinePeers.forEach((info, peerDeviceId) => {
-                if (peerDeviceId === msg.device_id) return; // 보낸 사람 본인 제외
+                if (peerDeviceId === msg.device_id) return;
                 if ((info.last_read_id || 0) >= msg.id) {
                     count += 1;
                 }
@@ -167,7 +295,6 @@
             return count;
         }
 
-        // 모든 말풍선의 "N명 읽음" 표시 갱신
         function refreshAllReadIndicators() {
             renderedMessages.forEach((msg, id) => {
                 const badge = document.getElementById(`read-${id}`);
@@ -241,6 +368,18 @@
 
             const initialRead = getReadCount(msg);
             const readText = initialRead > 0 ? `${initialRead}명 읽음` : '';
+            const sticker = parseSticker(msg.message);
+
+            const bubbleHtml = sticker
+                ? `
+                    <div class="sticker-pop bg-[#fdf8f1] border-2 border-[#e6d5c3] rounded-2xl px-4 py-2.5 flex flex-col items-center shadow-xs select-none">
+                        <span class="text-5xl leading-none mb-1.5">${sticker.emoji}</span>
+                        <span class="text-xs font-bold text-[#8c4a32] bg-[#f4ebd9] px-2.5 py-0.5 rounded-full">${esc(sticker.label)}</span>
+                    </div>
+                `
+                : (isMine
+                    ? `<div class="bg-[#8c4a32] text-white rounded-2xl rounded-tr-sm px-3.5 py-2 text-sm leading-relaxed break-words shadow-xs">${esc(msg.message)}</div>`
+                    : `<div class="bg-[#f6f1ea] text-[#2c2522] border border-[#e6d5c3] rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm leading-relaxed break-words">${esc(msg.message)}</div>`);
 
             row.innerHTML = isMine
                 ? `
@@ -250,17 +389,13 @@
                             <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
                             <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
                         </div>
-                        <div class="bg-[#8c4a32] text-white rounded-2xl rounded-tr-sm px-3.5 py-2 text-sm leading-relaxed break-words shadow-xs">
-                            ${esc(msg.message)}
-                        </div>
+                        ${bubbleHtml}
                     </div>
                 `
                 : `
                     <span class="text-[11px] font-bold text-[#6b5b4d] mb-1 px-1">${esc(msg.nickname)}</span>
                     <div class="flex items-end gap-1.5 max-w-[82%]">
-                        <div class="bg-[#f6f1ea] text-[#2c2522] border border-[#e6d5c3] rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm leading-relaxed break-words">
-                            ${esc(msg.message)}
-                        </div>
+                        ${bubbleHtml}
                         <div class="flex flex-col items-start shrink-0 leading-tight">
                             <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
                             <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
@@ -354,21 +489,16 @@
                 });
         }
 
-        document.getElementById('chatForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function postMessageToDb(messageText) {
             const now = Date.now();
-            if (now - lastSentAt < 2000) {
-                alert('메시지는 2초 간격으로 보낼 수 있습니다.');
-                return;
+            if (now - lastSentAt < 1500) {
+                alert('메시지와 이모티콘은 1.5초 간격으로 보낼 수 있습니다.');
+                return false;
             }
 
             const nickInput = document.getElementById('nicknameInput');
-            const msgInput = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
-
             const nickname = (nickInput.value.trim() || generateRandomNick()).slice(0, 12);
-            const message = msgInput.value.trim();
-            if (!message) return;
 
             localStorage.setItem('tg_chat_nickname', nickname);
             sendBtn.disabled = true;
@@ -376,20 +506,34 @@
             try {
                 const { data, error } = await sb
                     .from('chat_messages')
-                    .insert([{ nickname, message, device_id: getDeviceId() }])
+                    .insert([{ nickname, message: messageText, device_id: getDeviceId() }])
                     .select()
                     .single();
 
                 if (error) throw error;
 
                 lastSentAt = Date.now();
-                msgInput.value = '';
                 if (data) appendMessage(data, true);
+                return true;
             } catch (err) {
                 console.error(err);
                 alert('전송에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                return false;
             } finally {
                 sendBtn.disabled = false;
+            }
+        }
+
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msgInput = document.getElementById('messageInput');
+            const message = msgInput.value.trim();
+            if (!message) return;
+
+            const ok = await postMessageToDb(message);
+            if (ok) {
+                msgInput.value = '';
+                toggleEmojiDrawer(false);
                 msgInput.focus();
             }
         });
@@ -412,6 +556,7 @@
             }
 
             initNickname();
+            initEmojiDrawer();
             await loadRecentMessages();
             subscribeRealtime();
         });
