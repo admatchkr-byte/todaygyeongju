@@ -61,13 +61,19 @@
             </div>
         </section>
 
-        <!-- 전체 방문수 / 오늘 하루 방문수 (작고 심플한 상태 바) -->
-        <div class="max-w-6xl mx-auto px-4 mt-3 mb-2">
-            <div class="flex items-center justify-end">
-                <div class="inline-flex items-center gap-3 bg-white/90 border border-[#e6d5c3] rounded-full px-3.5 py-1 text-[11px] text-[#6b5b4d] shadow-xs">
-                    <span>전체 방문수 <strong id="total-visit-count" class="text-[#8c4a32] font-bold">-</strong>명</span>
-                    <span class="text-[#dfd2c3]">|</span>
-                    <span>오늘 하루 방문수 <strong id="today-visit-count" class="text-[#8c4a32] font-bold">-</strong>명</span>
+        <!-- 전체 방문수 / 오늘 하루 방문수 -->
+        <div class="max-w-6xl mx-auto px-4 mt-4 mb-3">
+            <div class="bg-white border border-[#e6d5c3] rounded-2xl px-5 py-3 shadow-xs flex items-center justify-around md:justify-center md:gap-10 text-sm md:text-base text-[#5c4d40]">
+                <div class="flex items-center gap-1.5">
+                    <span>전체 방문수</span>
+                    <strong id="total-visit-count" class="text-[#8c4a32] font-bold text-base md:text-lg">-</strong>
+                    <span>명</span>
+                </div>
+                <span class="text-[#dfd2c3]">|</span>
+                <div class="flex items-center gap-1.5">
+                    <span>오늘 하루 방문수</span>
+                    <strong id="today-visit-count" class="text-[#8c4a32] font-bold text-base md:text-lg">-</strong>
+                    <span>명</span>
                 </div>
             </div>
         </div>
