@@ -291,7 +291,8 @@
                         const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
                         const isSoldOut = hasLimit && remaining === 0;
                         const isClosed = isExpired || isSoldOut;
-                        const safeImg = cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '';
+                       const storeImgs = Array.isArray(cp.store_images) ? cp.store_images.filter(u => /^https?:\/\//.test(u)) : [];
+const safeImg = storeImgs[0] ? esc(storeImgs[0]) : (cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '');
                         const validText = cp.valid_until ? `${cp.valid_until.replace(/-/g, '.')}까지` : '상시 사용';
 
                         const statusBadge = isExpired
