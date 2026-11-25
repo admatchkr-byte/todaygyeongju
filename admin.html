@@ -61,9 +61,21 @@
     .badge-expired {
       background: #fde8e8; color: #b91c1c;
     }
-    .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0; }
     .msg { font-size: 13px; margin-top: 10px; color: var(--accent); font-weight: 600; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .preview-box { position: relative; width: 72px; height: 72px; }
+    .preview-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .preview-box button {
+      position: absolute; top: -6px; right: -6px; margin: 0; padding: 0;
+      width: 20px; height: 20px; border-radius: 99px; background: #c94a4a;
+      color: #fff; font-size: 11px; line-height: 20px; text-align: center;
+    }
+    .upload-box {
+      background: #fcf9f4; border: 1px dashed var(--border); border-radius: 10px; padding: 12px; margin-top: 12px;
+    }
+    .upload-box label { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -188,9 +200,23 @@
 
             <label>사용 조건 / 설명</label>
             <textarea id="cp-desc" placeholder="예: 결제 시 쿠폰 이미지 제시, 평일만 적용 등"></textarea>
-            <label>쿠폰 이미지 업로드</label>
-            <input type="file" id="cp-image" accept="image/*" />
-            <div id="cp-image-hint" class="hint hidden"></div>
+
+            <!-- 1. 매장/음식 대표 사진 (최대 5장) -->
+            <div class="upload-box">
+              <label>1. 매장 / 음식 대표 사진 업로드 (최대 5장 · 목록에서 옆으로 스크롤됨)</label>
+              <input type="file" id="cp-store-images" accept="image/*" multiple />
+              <div id="cp-store-images-hint" class="hint">사진을 여러 장 한 번에 선택할 수 있습니다. (최대 5장)</div>
+              <div id="cp-store-images-preview" class="preview-grid"></div>
+            </div>
+
+            <!-- 2. 실제 쿠폰 이미지 (쿠폰 받기 클릭 시 팝업에 표시) -->
+            <div class="upload-box">
+              <label>2. 쿠폰 이미지 업로드 (쿠폰 받기를 눌렀을 때 팝업에 뜨는 이미지 · 1장)</label>
+              <input type="file" id="cp-image" accept="image/*" />
+              <div id="cp-image-hint" class="hint">비워두면 매장명·발급번호가 들어간 기본 쿠폰 이미지가 자동 생성됩니다.</div>
+              <div id="cp-coupon-image-preview" class="preview-grid"></div>
+            </div>
+
             <div class="btn-row">
               <button type="submit" id="cp-submit-btn">쿠폰 등록하기</button>
               <button type="button" id="cp-cancel-btn" class="secondary hidden">수정 취소</button>
@@ -218,7 +244,8 @@
 
     let couponsCache = [];
     let editingCouponId = null;
-    let editingImageUrl = '';
+    let editingStoreImages = [];
+    let editingCouponImageUrl = '';
 
     const escapeHtml = (str = '') =>
       String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
@@ -269,6 +296,56 @@
       qtyPreset.value = ['10', '30', '50', '100'].includes(qtyInput.value) ? qtyInput.value : 'custom';
     });
 
+    // 매장 사진 / 쿠폰 이미지 미리보기 렌더
+    function renderStoreImagePreviews() {
+      const box = document.getElementById('cp-store-images-preview');
+      const hint = document.getElementById('cp-store-images-hint');
+      const remain = Math.max(0, 5 - editingStoreImages.length);
+      hint.textContent = editingStoreImages.length > 0
+        ? `현재 등록된 매장 사진 ${editingStoreImages.length}장 (추가 가능: ${remain}장)`
+        : '사진을 여러 장 한 번에 선택할 수 있습니다. (최대 5장)';
+
+      box.innerHTML = editingStoreImages.map((url, idx) => `
+        <div class="preview-box">
+          <img src="${escapeHtml(url)}" alt="매장사진 ${idx + 1}">
+          <button type="button" title="사진 제거" onclick="removeSavedStoreImage(${idx})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    window.removeSavedStoreImage = (idx) => {
+      editingStoreImages.splice(idx, 1);
+      renderStoreImagePreviews();
+    };
+
+    function renderCouponImagePreview() {
+      const box = document.getElementById('cp-coupon-image-preview');
+      if (!editingCouponImageUrl) {
+        box.innerHTML = '';
+        return;
+      }
+      box.innerHTML = `
+        <div class="preview-box">
+          <img src="${escapeHtml(editingCouponImageUrl)}" alt="쿠폰 이미지">
+          <button type="button" title="쿠폰 이미지 제거" onclick="removeSavedCouponImage()">✕</button>
+        </div>
+      `;
+    }
+
+    window.removeSavedCouponImage = () => {
+      editingCouponImageUrl = '';
+      document.getElementById('cp-image').value = '';
+      renderCouponImagePreview();
+    };
+
+    document.getElementById('cp-store-images').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (editingStoreImages.length + files.length > 5) {
+        alert(`매장 사진은 최대 5장까지 등록할 수 있습니다. (현재 ${editingStoreImages.length}장 등록됨)`);
+        e.target.value = '';
+      }
+    });
+
     // 행사 폼 초기화
     function resetEventForm() {
       editingEventId = null;
@@ -289,17 +366,19 @@
     // 쿠폰 폼 초기화
     function resetCouponForm() {
       editingCouponId = null;
-      editingImageUrl = '';
+      editingStoreImages = [];
+      editingCouponImageUrl = '';
       document.getElementById('coupon-form').reset();
       couponTypeSelect.value = 'limited';
       qtyPreset.value = '50';
       qtyInput.value = '50';
       syncCouponTypeUI();
+      renderStoreImagePreviews();
+      renderCouponImagePreview();
       document.getElementById('cp-form-title').textContent = '새 쿠폰 등록';
       document.getElementById('cp-submit-btn').textContent = '쿠폰 등록하기';
       document.getElementById('cp-cancel-btn').classList.add('hidden');
-      document.getElementById('cp-image-hint').classList.add('hidden');
-      document.getElementById('cp-image-hint').textContent = '';
+      document.getElementById('cp-image-hint').textContent = '비워두면 매장명·발급번호가 들어간 기본 쿠폰 이미지가 자동 생성됩니다.';
     }
 
     document.getElementById('cp-cancel-btn').addEventListener('click', () => {
@@ -473,6 +552,10 @@
         const remaining = hasLimit ? Math.max(0, total - issued) : null;
         const isExpired = cp.valid_until && today > cp.valid_until;
         const validText = cp.valid_until ? `~ ${cp.valid_until}까지` : '상시 사용';
+        const storeImgs = Array.isArray(cp.store_images) && cp.store_images.length > 0
+          ? cp.store_images
+          : (cp.image_url ? [cp.image_url] : []);
+        const thumbUrl = storeImgs[0] || cp.image_url || '';
 
         const qtyInfo = hasLimit
           ? `남은 수량: <strong>${remaining}개</strong> / 총 ${total}개`
@@ -480,7 +563,7 @@
 
         return `
           <div class="item">
-            ${cp.image_url ? `<img class="thumb" src="${escapeHtml(cp.image_url)}" alt="">` : ''}
+            ${thumbUrl ? `<img class="thumb" src="${escapeHtml(thumbUrl)}" alt="">` : ''}
             <div class="item-info">
               <div>
                 <span class="badge">${escapeHtml(cp.discount_info)}</span>
@@ -489,7 +572,7 @@
                 <strong>${escapeHtml(cp.store_name)}</strong>
               </div>
               <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
-                ${qtyInfo} · 유효기간: <strong>${escapeHtml(validText)}</strong>
+                ${qtyInfo} · 유효기간: <strong>${escapeHtml(validText)}</strong> · 매장사진 ${storeImgs.length}장 ${cp.image_url ? '· 쿠폰이미지 등록됨' : ''}
               </div>
               ${cp.description ? `<div style="font-size:12px;color:#8d7f70;margin-top:2px;">${escapeHtml(cp.description)}</div>` : ''}
             </div>
@@ -508,7 +591,8 @@
       if (!cp) return;
 
       editingCouponId = cp.id;
-      editingImageUrl = cp.image_url || '';
+      editingStoreImages = Array.isArray(cp.store_images) ? [...cp.store_images] : [];
+      editingCouponImageUrl = cp.image_url || '';
 
       const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
       couponTypeSelect.value = hasLimit ? 'limited' : 'unlimited';
@@ -524,21 +608,32 @@
       document.getElementById('cp-discount').value = cp.discount_info || '';
       document.getElementById('cp-valid-until').value = cp.valid_until || '';
       document.getElementById('cp-desc').value = cp.description || '';
+      document.getElementById('cp-store-images').value = '';
       document.getElementById('cp-image').value = '';
+
+      renderStoreImagePreviews();
+      renderCouponImagePreview();
 
       document.getElementById('cp-form-title').textContent = `쿠폰 수정 (${cp.store_name})`;
       document.getElementById('cp-submit-btn').textContent = '수정 저장하기';
       document.getElementById('cp-cancel-btn').classList.remove('hidden');
 
-      const hint = document.getElementById('cp-image-hint');
-      hint.textContent = editingImageUrl
-        ? '새 파일을 선택하지 않으면 기존 쿠폰 이미지가 그대로 유지됩니다.'
-        : '현재 등록된 이미지가 없습니다. 필요하면 이미지를 선택해 주세요.';
-      hint.classList.remove('hidden');
+      document.getElementById('cp-image-hint').textContent = editingCouponImageUrl
+        ? '새 파일을 선택하지 않으면 기존 쿠폰 이미지가 유지됩니다. (위 X 버튼으로 삭제 가능)'
+        : '등록된 쿠폰 이미지가 없습니다. 필요하면 선택해 주세요.';
 
       document.getElementById('cp-msg').textContent = '';
       document.getElementById('coupon-form-card').scrollIntoView({ behavior: 'smooth' });
     };
+
+    async function uploadToCouponsBucket(file, prefix) {
+      const ext = file.name.split('.').pop();
+      const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from('coupons').upload(fileName, file);
+      if (error) throw error;
+      const { data } = sb.storage.from('coupons').getPublicUrl(fileName);
+      return data.publicUrl;
+    }
 
     // 쿠폰 등록 및 수정 저장
     document.getElementById('coupon-form').addEventListener('submit', async (e) => {
@@ -546,46 +641,58 @@
       const msg = document.getElementById('cp-msg');
       msg.textContent = '저장 중...';
 
-      let imageUrl = editingCouponId ? editingImageUrl : '';
-      const file = document.getElementById('cp-image').files[0];
+      try {
+        // 1. 매장 대표 사진 업로드 (최대 5장)
+        const newStoreFiles = Array.from(document.getElementById('cp-store-images').files || []);
+        if (editingStoreImages.length + newStoreFiles.length > 5) {
+          msg.textContent = '매장 사진은 최대 5장까지만 등록할 수 있습니다.';
+          return;
+        }
 
-      if (file) {
-        const ext = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error: upErr } = await sb.storage.from('coupons').upload(fileName, file);
-        if (upErr) return (msg.textContent = '이미지 업로드 실패: ' + upErr.message);
+        const finalStoreImages = [...editingStoreImages];
+        for (const f of newStoreFiles) {
+          const url = await uploadToCouponsBucket(f, 'store');
+          finalStoreImages.push(url);
+        }
 
-        const { data: urlData } = sb.storage.from('coupons').getPublicUrl(fileName);
-        imageUrl = urlData.publicUrl;
+        // 2. 실제 쿠폰 이미지 업로드 (1장)
+        let couponImageUrl = editingCouponImageUrl;
+        const couponFile = document.getElementById('cp-image').files[0];
+        if (couponFile) {
+          couponImageUrl = await uploadToCouponsBucket(couponFile, 'coupon');
+        }
+
+        const isLimited = couponTypeSelect.value === 'limited';
+        const totalQty = isLimited ? Math.max(1, parseInt(qtyInput.value, 10) || 50) : null;
+        const validUntil = document.getElementById('cp-valid-until').value || null;
+
+        const payload = {
+          store_name: document.getElementById('cp-store').value.trim(),
+          discount_info: document.getElementById('cp-discount').value.trim(),
+          description: document.getElementById('cp-desc').value.trim(),
+          store_images: finalStoreImages,
+          image_url: couponImageUrl,
+          total_quantity: totalQty,
+          valid_until: validUntil
+        };
+
+        let error;
+        if (editingCouponId) {
+          ({ error } = await sb.from('coupons').update(payload).eq('id', editingCouponId));
+        } else {
+          payload.issued_quantity = 0;
+          ({ error } = await sb.from('coupons').insert([payload]));
+        }
+
+        if (error) throw error;
+
+        const wasEditing = !!editingCouponId;
+        resetCouponForm();
+        msg.textContent = wasEditing ? '쿠폰이 수정되었습니다!' : '쿠폰이 등록되었습니다!';
+        loadCoupons();
+      } catch (err) {
+        msg.textContent = '저장 실패: ' + (err.message || err);
       }
-
-      const isLimited = couponTypeSelect.value === 'limited';
-      const totalQty = isLimited ? Math.max(1, parseInt(qtyInput.value, 10) || 50) : null;
-      const validUntil = document.getElementById('cp-valid-until').value || null;
-
-      const payload = {
-        store_name: document.getElementById('cp-store').value.trim(),
-        discount_info: document.getElementById('cp-discount').value.trim(),
-        description: document.getElementById('cp-desc').value.trim(),
-        image_url: imageUrl,
-        total_quantity: totalQty,
-        valid_until: validUntil
-      };
-
-      let error;
-      if (editingCouponId) {
-        ({ error } = await sb.from('coupons').update(payload).eq('id', editingCouponId));
-      } else {
-        payload.issued_quantity = 0;
-        ({ error } = await sb.from('coupons').insert([payload]));
-      }
-
-      if (error) return (msg.textContent = '저장 실패: ' + error.message);
-
-      const wasEditing = !!editingCouponId;
-      resetCouponForm();
-      msg.textContent = wasEditing ? '쿠폰이 수정되었습니다!' : '쿠폰이 등록되었습니다!';
-      loadCoupons();
     });
 
     // 쿠폰 삭제
