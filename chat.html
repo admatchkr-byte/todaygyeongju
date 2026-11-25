@@ -30,6 +30,13 @@
         .sticker-pop {
             animation: stickerPop 0.25s ease-out;
         }
+        @keyframes highlightFlash {
+            0%, 100% { background-color: transparent; }
+            35% { background-color: rgba(140, 74, 50, 0.16); border-radius: 14px; }
+        }
+        .msg-highlight {
+            animation: highlightFlash 1.2s ease-out;
+        }
     </style>
 </head>
 <body class="bg-[#faf8f5] min-h-screen flex flex-col">
@@ -64,7 +71,7 @@
             <div class="text-center text-xs text-gray-400 py-10">채팅 내역을 불러오는 중입니다...</div>
         </div>
 
-        <!-- 카카오톡 스타일 이모티콘 서랍 (열기/닫기) -->
+        <!-- 카카오톡 스타일 이모티콘 서랍 -->
         <div id="emojiDrawer" class="hidden mt-2 bg-white border border-[#e6d5c3] rounded-2xl p-3 shadow-md">
             <div class="flex items-center justify-between border-b border-[#f0e7db] pb-2 mb-2.5">
                 <div class="flex gap-1.5">
@@ -78,15 +85,21 @@
                 <button type="button" onclick="toggleEmojiDrawer(false)" class="text-xs text-gray-400 hover:text-gray-700 px-2 py-0.5 font-bold">✕</button>
             </div>
 
-            <!-- 1. 대형 스티커 그리드 -->
             <div id="stickerGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto"></div>
-
-            <!-- 2. 기본 이모지 그리드 -->
             <div id="miniEmojiGrid" class="hidden grid grid-cols-8 sm:grid-cols-10 gap-1.5 max-h-48 overflow-y-auto"></div>
         </div>
 
         <!-- 입력 폼 -->
         <form id="chatForm" class="mt-2.5 bg-white border border-[#e8e2d8] rounded-2xl p-2.5 shadow-sm">
+            <!-- 대댓글(답장) 대상 미리보기 바 -->
+            <div id="replyPreviewBar" class="hidden mb-2 bg-[#faf4ec] border-l-4 border-[#8c4a32] rounded-r-xl px-3 py-1.5 flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <div id="replyTargetNick" class="text-[11px] font-bold text-[#8c4a32] truncate"></div>
+                    <div id="replyTargetText" class="text-xs text-[#6b5b4d] truncate"></div>
+                </div>
+                <button type="button" onclick="cancelReply()" title="답장 취소" class="shrink-0 text-xs text-gray-400 hover:text-gray-700 px-1.5 py-0.5 font-bold">✕</button>
+            </div>
+
             <div class="flex items-center gap-2 mb-2">
                 <span class="text-xs font-semibold text-[#7a6c5d] shrink-0 pl-1">닉네임</span>
                 <input
@@ -139,7 +152,6 @@
 
         const STICKER_PREFIX = '[STICKER]';
 
-        // 경주 감성 대형 스티커 12종
         const GYEONGJU_STICKERS = [
             { id: 'hi', emoji: '👋', label: '반가워요!' },
             { id: 'cheom', emoji: '🏯', label: '경주 도착!' },
@@ -155,7 +167,6 @@
             { id: 'thanks', emoji: '🙏', label: '감사해요!' }
         ];
 
-        // 입력창 삽입용 기본 이모지
         const MINI_EMOJIS = [
             '😊', '😂', '🥰', '😍', '🤩', '🥳', '😎', '🤔', '😅', '😭',
             '❤️', '🧡', '💛', '👍', '👏', '🙌', '🙏', '🔥', '✨', '🎉',
@@ -168,6 +179,7 @@
         let chatChannel = null;
         let myLastReadId = 0;
         let onlinePeers = new Map();
+        let replyingTo = null; // { id, nickname, message }
 
         const esc = (s = '') =>
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -209,7 +221,54 @@
             });
         }
 
-        // 이모티콘 서랍 초기화
+        function parseSticker(messageText) {
+            if (!messageText || !messageText.startsWith(STICKER_PREFIX)) return null;
+            const id = messageText.slice(STICKER_PREFIX.length).trim();
+            return GYEONGJU_STICKERS.find(s => s.id === id) || null;
+        }
+
+        function formatSnippetText(messageText) {
+            const st = parseSticker(messageText);
+            if (st) return `${st.emoji} ${st.label}`;
+            return messageText || '';
+        }
+
+        // 대댓글(답장) 지정 및 취소
+        window.startReply = (msgId) => {
+            const target = renderedMessages.get(msgId);
+            if (!target) return;
+
+            const snippet = formatSnippetText(target.message);
+            replyingTo = {
+                id: target.id,
+                nickname: target.nickname,
+                message: snippet
+            };
+
+            document.getElementById('replyTargetNick').textContent = `↳ ${target.nickname}님에게 답장`;
+            document.getElementById('replyTargetText').textContent = snippet;
+            document.getElementById('replyPreviewBar').classList.remove('hidden');
+            document.getElementById('messageInput').focus();
+        };
+
+        window.cancelReply = () => {
+            replyingTo = null;
+            document.getElementById('replyPreviewBar').classList.add('hidden');
+            document.getElementById('replyTargetNick').textContent = '';
+            document.getElementById('replyTargetText').textContent = '';
+        };
+
+        // 인용된 원본 메시지로 스크롤 & 강조
+        window.scrollToMessage = (targetId) => {
+            if (!targetId) return;
+            const el = document.getElementById(`msg-${targetId}`);
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.remove('msg-highlight');
+            void el.offsetWidth;
+            el.classList.add('msg-highlight');
+        };
+
         function initEmojiDrawer() {
             const stickerGrid = document.getElementById('stickerGrid');
             stickerGrid.innerHTML = GYEONGJU_STICKERS.map(st => `
@@ -269,12 +328,6 @@
             toggleEmojiDrawer(false);
             await postMessageToDb(`${STICKER_PREFIX}${st.id}`);
         };
-
-        function parseSticker(messageText) {
-            if (!messageText || !messageText.startsWith(STICKER_PREFIX)) return null;
-            const id = messageText.slice(STICKER_PREFIX.length).trim();
-            return GYEONGJU_STICKERS.find(s => s.id === id) || null;
-        }
 
         function formatTime(isoStr) {
             if (!isoStr) return '';
@@ -347,6 +400,22 @@
             renderedMessages.delete(id);
         };
 
+        function buildQuoteBoxHtml(msg, isMine) {
+            if (!msg.reply_to_nickname && !msg.reply_to_message) return '';
+            const boxStyle = isMine
+                ? 'bg-white/15 border-white/60 text-white/95'
+                : 'bg-white/90 border-[#8c4a32] text-[#4a3e35]';
+            const subStyle = isMine ? 'text-white/80' : 'text-gray-500';
+            const clickAttr = msg.reply_to_id ? `onclick="scrollToMessage(${msg.reply_to_id})"` : '';
+
+            return `
+                <div ${clickAttr} class="border-l-2 ${boxStyle} rounded-r-lg px-2.5 py-1 mb-1.5 text-left cursor-pointer hover:opacity-85 transition">
+                    <div class="text-[10px] font-bold truncate">${esc(msg.reply_to_nickname || '알 수 없음')}에게 답장</div>
+                    <div class="text-[11px] ${subStyle} truncate max-w-[200px] sm:max-w-[260px]">${esc(msg.reply_to_message || '')}</div>
+                </div>
+            `;
+        }
+
         function appendMessage(msg, autoScroll = true) {
             if (!msg || renderedMessages.has(msg.id)) return;
             const wasEmpty = renderedMessages.size === 0;
@@ -360,8 +429,9 @@
             const isMine = msg.device_id === getDeviceId();
             const row = document.createElement('div');
             row.id = `msg-${msg.id}`;
-            row.className = `flex flex-col ${isMine ? 'items-end' : 'items-start'}`;
+            row.className = `flex flex-col ${isMine ? 'items-end' : 'items-start'} px-1 py-0.5`;
 
+            const replyBtn = `<button type="button" onclick="startReply(${msg.id})" class="text-[10px] text-[#7a6c5d] hover:text-[#8c4a32] font-semibold shrink-0">답장</button>`;
             const adminDelBtn = isAdmin
                 ? `<button type="button" onclick="deleteChatMessage(${msg.id})" class="text-[10px] text-rose-600 hover:underline font-bold shrink-0">삭제</button>`
                 : '';
@@ -369,23 +439,28 @@
             const initialRead = getReadCount(msg);
             const readText = initialRead > 0 ? `${initialRead}명 읽음` : '';
             const sticker = parseSticker(msg.message);
+            const quoteHtml = buildQuoteBoxHtml(msg, !sticker && isMine);
 
             const bubbleHtml = sticker
                 ? `
                     <div class="sticker-pop bg-[#fdf8f1] border-2 border-[#e6d5c3] rounded-2xl px-4 py-2.5 flex flex-col items-center shadow-xs select-none">
+                        ${quoteHtml}
                         <span class="text-5xl leading-none mb-1.5">${sticker.emoji}</span>
                         <span class="text-xs font-bold text-[#8c4a32] bg-[#f4ebd9] px-2.5 py-0.5 rounded-full">${esc(sticker.label)}</span>
                     </div>
                 `
                 : (isMine
-                    ? `<div class="bg-[#8c4a32] text-white rounded-2xl rounded-tr-sm px-3.5 py-2 text-sm leading-relaxed break-words shadow-xs">${esc(msg.message)}</div>`
-                    : `<div class="bg-[#f6f1ea] text-[#2c2522] border border-[#e6d5c3] rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm leading-relaxed break-words">${esc(msg.message)}</div>`);
+                    ? `<div class="bg-[#8c4a32] text-white rounded-2xl rounded-tr-sm px-3.5 py-2 text-sm leading-relaxed break-words shadow-xs">${quoteHtml}${esc(msg.message)}</div>`
+                    : `<div class="bg-[#f6f1ea] text-[#2c2522] border border-[#e6d5c3] rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm leading-relaxed break-words">${quoteHtml}${esc(msg.message)}</div>`);
 
             row.innerHTML = isMine
                 ? `
-                    <div class="flex items-end gap-1.5 max-w-[82%]">
-                        ${adminDelBtn}
-                        <div class="flex flex-col items-end shrink-0 leading-tight">
+                    <div class="flex items-end gap-1.5 max-w-[85%]">
+                        <div class="flex flex-col items-end shrink-0 leading-tight gap-0.5">
+                            <div class="flex items-center gap-1.5">
+                                ${adminDelBtn}
+                                ${replyBtn}
+                            </div>
                             <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
                             <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
                         </div>
@@ -394,13 +469,16 @@
                 `
                 : `
                     <span class="text-[11px] font-bold text-[#6b5b4d] mb-1 px-1">${esc(msg.nickname)}</span>
-                    <div class="flex items-end gap-1.5 max-w-[82%]">
+                    <div class="flex items-end gap-1.5 max-w-[85%]">
                         ${bubbleHtml}
-                        <div class="flex flex-col items-start shrink-0 leading-tight">
+                        <div class="flex flex-col items-start shrink-0 leading-tight gap-0.5">
+                            <div class="flex items-center gap-1.5">
+                                ${replyBtn}
+                                ${adminDelBtn}
+                            </div>
                             <span id="read-${msg.id}" class="text-[10px] font-bold text-[#8c4a32]">${readText}</span>
                             <span class="text-[10px] text-gray-400">${formatTime(msg.created_at)}</span>
                         </div>
-                        ${adminDelBtn}
                     </div>
                 `;
 
@@ -503,16 +581,26 @@
             localStorage.setItem('tg_chat_nickname', nickname);
             sendBtn.disabled = true;
 
+            const payload = {
+                nickname,
+                message: messageText,
+                device_id: getDeviceId(),
+                reply_to_id: replyingTo ? replyingTo.id : null,
+                reply_to_nickname: replyingTo ? replyingTo.nickname : null,
+                reply_to_message: replyingTo ? replyingTo.message.slice(0, 80) : null
+            };
+
             try {
                 const { data, error } = await sb
                     .from('chat_messages')
-                    .insert([{ nickname, message: messageText, device_id: getDeviceId() }])
+                    .insert([payload])
                     .select()
                     .single();
 
                 if (error) throw error;
 
                 lastSentAt = Date.now();
+                cancelReply();
                 if (data) appendMessage(data, true);
                 return true;
             } catch (err) {
