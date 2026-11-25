@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자유게시판 - 오늘, 경주</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏯%3C/text%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #faf8f5;
+            color: #2c2522;
+        }
+        .font-batang {
+            font-family: 'Gowun Batang', serif;
+        }
+    </style>
+</head>
+<body class="bg-[#faf8f5] min-h-screen flex flex-col">
+
+    <!-- 상단 네비게이션 -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="text-lg md:text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
+                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2.5 py-0.5 rounded-full font-bold">자유게시판</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs md:text-sm font-semibold">
+                <a href="chat.html" class="text-emerald-700 hover:underline">💬 실시간 채팅</a>
+                <a href="index.html" class="text-[#8c4a32] hover:underline">← 메인</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 영역 -->
+    <main class="max-w-4xl mx-auto w-full px-4 py-6 md:py-10 flex-grow">
+        <!-- 상단 타이틀 + 글쓰기 버튼 -->
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <div>
+                <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">COMMUNITY BOARD</span>
+                <h1 class="text-2xl md:text-3xl font-bold font-batang mt-1">경주 여행자 자유게시판</h1>
+                <p class="text-xs md:text-sm text-gray-600 mt-1">맛집 후기, 여행 꿀팁, 질문까지 자유롭게 이야기를 남겨보세요.</p>
+            </div>
+            <button type="button" onclick="openWriteModal()" class="bg-[#8c4a32] hover:bg-[#733b27] text-white font-bold px-4 py-2.5 rounded-xl text-xs md:text-sm shadow-sm transition">
+                ✏️ 글쓰기
+            </button>
+        </div>
+
+        <!-- 카테고리 탭 + 검색창 -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+            <div id="categoryTabs" class="flex flex-wrap gap-1.5">
+                <button type="button" data-cat="전체" class="cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white transition">전체</button>
+                <button type="button" data-cat="자유" class="cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">자유</button>
+                <button type="button" data-cat="맛집/카페 후기" class="cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">맛집/카페 후기</button>
+                <button type="button" data-cat="질문/정보" class="cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">질문/정보</button>
+                <button type="button" data-cat="동행/나눔" class="cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">동행/나눔</button>
+            </div>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="제목·내용·작성자 검색"
+                class="w-full md:w-56 bg-white border border-[#e6d5c3] rounded-xl px-3.5 py-2 text-xs md:text-sm focus:outline-none focus:border-[#8c4a32]"
+            >
+        </div>
+
+        <!-- 게시글 목록 -->
+        <div id="postList" class="space-y-3">
+            <div class="bg-white border border-[#e8e2d8] rounded-2xl p-10 text-center text-xs md:text-sm text-gray-500">
+                게시글을 불러오는 중입니다...
+            </div>
+        </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-[#e8e2d8] py-8 text-center text-xs text-gray-500">
+        <p class="font-batang text-sm text-[#8c4a32] font-bold mb-2">오늘, 경주 (TODAY GYEONGJU)</p>
+        <p>© 2026 Today Gyeongju. All rights reserved.</p>
+    </footer>
+
+    <!-- 글쓰기 모달 -->
+    <div id="writeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-[#fffdf9] border border-[#e6d5c3] rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button type="button" onclick="closeWriteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-[#8c4a32] text-lg font-bold w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">✕</button>
+            <h2 class="text-xl font-bold font-batang text-[#8c4a32] mb-4">새 글 작성하기</h2>
+
+            <form id="writeForm" class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">말머리</label>
+                        <select id="postCategory" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3 py-2 text-sm">
+                            <option value="자유">자유</option>
+                            <option value="맛집/카페 후기">맛집/카페 후기</option>
+                            <option value="질문/정보">질문/정보</option>
+                            <option value="동행/나눔">동행/나눔</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">닉네임 *</label>
+                        <input type="text" id="postNickname" maxlength="12" required placeholder="예: 경주여행객" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">삭제 비밀번호 *</label>
+                        <input type="password" id="postPassword" maxlength="10" required placeholder="4자리 이상" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3 py-2 text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">제목 *</label>
+                    <input type="text" id="postTitle" maxlength="100" required placeholder="제목을 입력해 주세요" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3.5 py-2 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">내용 *</label>
+                    <textarea id="postContent" rows="5" maxlength="3000" required placeholder="내용을 입력해 주세요" class="w-full bg-white border border-[#e6d5c3] rounded-xl p-3.5 text-sm resize-y"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">사진 첨부 (선택)</label>
+                    <input type="file" id="postImage" accept="image/*" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3 py-2 text-xs">
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeWriteModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs md:text-sm font-semibold">취소</button>
+                    <button type="submit" id="writeSubmitBtn" class="px-5 py-2.5 rounded-xl bg-[#8c4a32] hover:bg-[#733b27] text-white text-xs md:text-sm font-bold disabled:opacity-50">등록하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 게시글 상세 & 댓글 모달 -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-[#fffdf9] border border-[#e6d5c3] rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <button type="button" onclick="closeDetailModal()" class="absolute top-4 right-4 text-gray-400 hover:text-[#8c4a32] text-lg font-bold w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">✕</button>
+
+            <div id="detailBody"></div>
+
+            <!-- 댓글 영역 -->
+            <div class="mt-6 pt-5 border-t border-[#e8e2d8]">
+                <h3 class="text-sm font-bold text-[#2c2522] mb-3">💬 댓글 <span id="commentCount" class="text-[#8c4a32]">0</span></h3>
+                <div id="commentList" class="space-y-2.5 mb-4"></div>
+
+                <form id="commentForm" class="bg-[#faf8f5] border border-[#e6d5c3] rounded-xl p-3 space-y-2">
+                    <div class="flex gap-2">
+                        <input type="text" id="commentNickname" maxlength="12" required placeholder="닉네임" class="w-1/2 bg-white border border-[#e6d5c3] rounded-lg px-2.5 py-1.5 text-xs">
+                        <input type="password" id="commentPassword" maxlength="10" required placeholder="삭제 비밀번호" class="w-1/2 bg-white border border-[#e6d5c3] rounded-lg px-2.5 py-1.5 text-xs">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="commentContent" maxlength="500" required placeholder="따뜻한 댓글을 남겨주세요" class="flex-1 bg-white border border-[#e6d5c3] rounded-lg px-3 py-2 text-xs md:text-sm">
+                        <button type="submit" id="commentSubmitBtn" class="shrink-0 bg-[#8c4a32] hover:bg-[#733b27] text-white font-bold px-3.5 py-2 rounded-lg text-xs">등록</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://cgwqpgmfyryegykvggyp.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_7nrf_n8X346CPb-5LWZycA_P3aVc--Q';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allPosts = [];
+        let currentCategory = '전체';
+        let currentKeyword = '';
+        let activePostId = null;
+
+        const esc = (s = '') =>
+            String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function formatDate(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${y}.${m}.${day} ${hh}:${mm}`;
+        }
+
+        function getCategoryBadge(cat) {
+            if (cat === '맛집/카페 후기') return 'bg-amber-100 text-amber-800';
+            if (cat === '질문/정보') return 'bg-sky-100 text-sky-800';
+            if (cat === '동행/나눔') return 'bg-emerald-100 text-emerald-800';
+            return 'bg-[#f4ebd9] text-[#8c4a32]';
+        }
+
+        // 카테고리 탭 전환
+        document.getElementById('categoryTabs').addEventListener('click', (e) => {
+            const btn = e.target.closest('.cat-btn');
+            if (!btn) return;
+            currentCategory = btn.dataset.cat;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                const active = b.dataset.cat === currentCategory;
+                b.className = active
+                    ? 'cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white transition'
+                    : 'cat-btn px-3.5 py-1.5 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition';
+            });
+            renderPosts();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            currentKeyword = e.target.value.trim().toLowerCase();
+            renderPosts();
+        });
+
+        async function loadPosts() {
+            const listEl = document.getElementById('postList');
+            const { data, error } = await sb
+                .from('board_posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                listEl.innerHTML = '<div class="bg-white border border-[#e8e2d8] rounded-2xl p-10 text-center text-xs md:text-sm text-rose-600">게시글을 불러오지 못했습니다.</div>';
+                return;
+            }
+
+            allPosts = data || [];
+            renderPosts();
+        }
+
+        function renderPosts() {
+            const listEl = document.getElementById('postList');
+            const filtered = allPosts.filter(p => {
+                const catOk = currentCategory === '전체' || p.category === currentCategory;
+                if (!catOk) return false;
+                if (!currentKeyword) return true;
+                return (
+                    (p.title || '').toLowerCase().includes(currentKeyword) ||
+                    (p.content || '').toLowerCase().includes(currentKeyword) ||
+                    (p.nickname || '').toLowerCase().includes(currentKeyword)
+                );
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="bg-white border border-dashed border-[#e6d5c3] rounded-2xl p-12 text-center text-xs md:text-sm text-gray-500">
+                        등록된 게시글이 없습니다. 첫 번째 글을 작성해 보세요! ✏️
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(post => {
+                const hasImg = post.image_url && /^https?:\/\//.test(post.image_url);
+                return `
+                    <article onclick="openDetailModal(${post.id})" class="bg-white border border-[#e8e2d8] hover:border-[#c9b399] rounded-2xl p-4 md:p-5 shadow-xs hover:shadow-sm transition cursor-pointer flex items-center justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${getCategoryBadge(post.category)}">
+                                    ${esc(post.category)}
+                                </span>
+                                <span class="text-xs text-gray-400">${esc(post.nickname)} · ${formatDate(post.created_at)}</span>
+                            </div>
+                            <h2 class="text-base md:text-lg font-bold text-[#2c2522] truncate mb-1">
+                                ${esc(post.title)}
+                            </h2>
+                            <p class="text-xs md:text-sm text-gray-500 line-clamp-1">
+                                ${esc(post.content)}
+                            </p>
+                        </div>
+                        ${hasImg ? `<img src="${esc(post.image_url)}" loading="lazy" alt="" class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-xl border border-[#e8e2d8] shrink-0">` : ''}
+                    </article>
+                `;
+            }).join('');
+        }
+
+        // 글쓰기 모달
+        window.openWriteModal = () => {
+            const savedNick = localStorage.getItem('tg_chat_nickname');
+            if (savedNick) document.getElementById('postNickname').value = savedNick;
+            const m = document.getElementById('writeModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        };
+
+        window.closeWriteModal = () => {
+            const m = document.getElementById('writeModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        };
+
+        document.getElementById('writeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('writeSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = '등록 중...';
+
+            try {
+                let imageUrl = null;
+                const file = document.getElementById('postImage').files[0];
+                if (file) {
+                    const ext = file.name.split('.').pop();
+                    const fileName = `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                    const { error: upErr } = await sb.storage.from('board').upload(fileName, file);
+                    if (upErr) throw upErr;
+                    const { data: urlData } = sb.storage.from('board').getPublicUrl(fileName);
+                    imageUrl = urlData.publicUrl;
+                }
+
+                const nickname = document.getElementById('postNickname').value.trim();
+                localStorage.setItem('tg_chat_nickname', nickname);
+
+                const { error } = await sb.from('board_posts').insert([{
+                    category: document.getElementById('postCategory').value,
+                    nickname,
+                    password: document.getElementById('postPassword').value.trim(),
+                    title: document.getElementById('postTitle').value.trim(),
+                    content: document.getElementById('postContent').value.trim(),
+                    image_url: imageUrl
+                }]);
+
+                if (error) throw error;
+
+                document.getElementById('writeForm').reset();
+                closeWriteModal();
+                await loadPosts();
+            } catch (err) {
+                console.error(err);
+                alert('글 등록에 실패했습니다: ' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '등록하기';
+            }
+        });
+
+        // 상세 보기 & 댓글
+        window.openDetailModal = async (postId) => {
+            const post = allPosts.find(p => p.id === postId);
+            if (!post) return;
+            activePostId = postId;
+
+            const savedNick = localStorage.getItem('tg_chat_nickname');
+            if (savedNick) document.getElementById('commentNickname').value = savedNick;
+
+            const safeImg = post.image_url && /^https?:\/\//.test(post.image_url) ? esc(post.image_url) : '';
+            document.getElementById('detailBody').innerHTML = `
+                <div class="pr-8">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-md ${getCategoryBadge(post.category)}">${esc(post.category)}</span>
+                        <span class="text-xs text-gray-500">${esc(post.nickname)} · ${formatDate(post.created_at)}</span>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold font-batang text-[#2c2522] mb-4">${esc(post.title)}</h2>
+                </div>
+                ${safeImg ? `<img src="${safeImg}" alt="" class="w-full max-h-96 object-contain rounded-xl border border-[#e8e2d8] bg-[#faf8f5] mb-4">` : ''}
+                <div class="text-sm md:text-base text-[#2c2522] leading-relaxed whitespace-pre-line mb-5">${esc(post.content)}</div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="deletePostByPassword(${post.id})" class="text-xs text-rose-600 hover:underline font-semibold">
+                        🗑️ 글 삭제
+                    </button>
+                </div>
+            `;
+
+            const m = document.getElementById('detailModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            await loadComments(postId);
+        };
+
+        window.closeDetailModal = () => {
+            const m = document.getElementById('detailModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+            activePostId = null;
+        };
+
+        async function loadComments(postId) {
+            const listEl = document.getElementById('commentList');
+            const countEl = document.getElementById('commentCount');
+            listEl.innerHTML = '<div class="text-xs text-gray-400">댓글을 불러오는 중...</div>';
+
+            const { data, error } = await sb
+                .from('board_comments')
+                .select('*')
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                listEl.innerHTML = '<div class="text-xs text-rose-500">댓글을 불러오지 못했습니다.</div>';
+                return;
+            }
+
+            const comments = data || [];
+            countEl.textContent = comments.length;
+
+            if (comments.length === 0) {
+                listEl.innerHTML = '<div class="text-xs text-gray-400 py-2">첫 댓글을 남겨보세요!</div>';
+                return;
+            }
+
+            listEl.innerHTML = comments.map(c => `
+                <div class="bg-white border border-[#ece4d8] rounded-xl p-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <div>
+                            <strong class="text-[#2c2522]">${esc(c.nickname)}</strong>
+                            <span class="text-gray-400 ml-1.5">${formatDate(c.created_at)}</span>
+                        </div>
+                        <button type="button" onclick="deleteCommentByPassword(${c.id})" class="text-[11px] text-gray-400 hover:text-rose-600">삭제</button>
+                    </div>
+                    <p class="text-xs md:text-sm text-[#3d332c] whitespace-pre-line">${esc(c.content)}</p>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('commentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!activePostId) return;
+
+            const btn = document.getElementById('commentSubmitBtn');
+            btn.disabled = true;
+
+            try {
+                const nickname = document.getElementById('commentNickname').value.trim();
+                localStorage.setItem('tg_chat_nickname', nickname);
+
+                const { error } = await sb.from('board_comments').insert([{
+                    post_id: activePostId,
+                    nickname,
+                    password: document.getElementById('commentPassword').value.trim(),
+                    content: document.getElementById('commentContent').value.trim()
+                }]);
+
+                if (error) throw error;
+
+                document.getElementById('commentContent').value = '';
+                await loadComments(activePostId);
+            } catch (err) {
+                alert('댓글 등록 실패: ' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        window.deletePostByPassword = async (postId) => {
+            const pw = prompt('글 작성 시 입력한 삭제 비밀번호를 입력하세요:');
+            if (!pw) return;
+
+            const { data, error } = await sb.rpc('delete_board_post', {
+                p_post_id: postId,
+                p_password: pw.trim()
+            });
+
+            if (error || !data) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            alert('게시글이 삭제되었습니다.');
+            closeDetailModal();
+            await loadPosts();
+        };
+
+        window.deleteCommentByPassword = async (commentId) => {
+            const pw = prompt('댓글 작성 시 입력한 삭제 비밀번호를 입력하세요:');
+            if (!pw) return;
+
+            const { data, error } = await sb.rpc('delete_board_comment', {
+                p_comment_id: commentId,
+                p_password: pw.trim()
+            });
+
+            if (error || !data) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            if (activePostId) await loadComments(activePostId);
+        };
+
+        window.addEventListener('DOMContentLoaded', loadPosts);
+    </script>
+</body>
+</html>
