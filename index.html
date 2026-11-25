@@ -133,6 +133,84 @@
                 </div>
                 <span id="update-time" class="text-xs text-gray-400">업데이트 중...</span>
             </div>
+
+            <!-- 황리단길 실시간 인파 & 혼잡도 위젯 -->
+        <section id="live-crowd" class="max-w-6xl mx-auto px-4 py-4 md:py-6">
+            <div class="bg-white border border-[#e6d5c3] rounded-2xl p-5 md:p-7 shadow-xs">
+                <!-- 상단 헤더 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                LIVE 현장 체감
+                            </span>
+                            <span id="crowdVoteMeta" class="text-xs text-gray-400">최근 1시간 기준</span>
+                        </div>
+                        <h3 class="text-lg md:text-xl font-bold font-batang text-[#2c2522] mt-1.5">
+                            지금 황리단길 사람 얼마나 있나요?
+                        </h3>
+                    </div>
+
+                    <!-- 네이버 / 카카오 실시간 혼잡도 바로가기 -->
+                    <div class="flex items-center gap-1.5">
+                        <a href="https://map.naver.com/p/search/%ED%99%A9%EB%A6%AC%EB%8B%A8%EA%B8%B8" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center gap-1 text-xs font-bold bg-[#03c75a]/10 hover:bg-[#03c75a]/20 text-[#029e47] border border-[#03c75a]/30 px-3 py-2 rounded-xl transition">
+                            <span>N 네이버 지도</span>
+                        </a>
+                        <a href="https://map.kakao.com/?q=%ED%99%A9%EB%A6%AC%EB%8B%A8%EA%B8%B8" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center gap-1 text-xs font-bold bg-[#fee500]/30 hover:bg-[#fee500]/50 text-[#3c1e1e] border border-[#e5cd00]/50 px-3 py-2 rounded-xl transition">
+                            <span>🗺️ 카카오맵</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 현재 상태 요약 배너 -->
+                <div id="crowdStatusCard" class="bg-[#faf6f0] border border-[#eadcc9] rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                        <span id="crowdMainEmoji" class="text-3xl leading-none">🟡</span>
+                        <div>
+                            <div id="crowdMainTitle" class="text-base md:text-lg font-bold text-[#2c2522]">
+                                실시간 혼잡도 확인 중...
+                            </div>
+                            <p id="crowdMainDesc" class="text-xs text-[#6b5b4d] mt-0.5">
+                                현장에 계시다면 아래 버튼으로 지금 분위기를 알려주세요!
+                            </p>
+                        </div>
+                    </div>
+                    <a href="chat.html" class="shrink-0 self-start sm:self-center text-xs font-bold text-[#8c4a32] bg-white border border-[#dcc7b0] hover:bg-[#f4ebd9] px-3 py-1.5 rounded-lg transition">
+                        💬 실시간 채팅으로 물어보기 →
+                    </a>
+                </div>
+
+                <!-- 4단계 원클릭 현장 제보 버튼 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <button type="button" onclick="submitCrowdVote('relaxed')" data-level="relaxed"
+                        class="crowd-btn flex items-center justify-between bg-[#faf8f5] hover:bg-emerald-50 border border-[#e6d5c3] hover:border-emerald-400 rounded-xl px-3.5 py-2.5 text-left transition">
+                        <span class="text-xs md:text-sm font-bold text-[#2c2522]">🟢 여유로움</span>
+                        <span id="cnt-relaxed" class="text-xs font-bold text-emerald-700">0</span>
+                    </button>
+
+                    <button type="button" onclick="submitCrowdVote('normal')" data-level="normal"
+                        class="crowd-btn flex items-center justify-between bg-[#faf8f5] hover:bg-amber-50 border border-[#e6d5c3] hover:border-amber-400 rounded-xl px-3.5 py-2.5 text-left transition">
+                        <span class="text-xs md:text-sm font-bold text-[#2c2522]">🟡 보통</span>
+                        <span id="cnt-normal" class="text-xs font-bold text-amber-700">0</span>
+                    </button>
+
+                    <button type="button" onclick="submitCrowdVote('waiting')" data-level="waiting"
+                        class="crowd-btn flex items-center justify-between bg-[#faf8f5] hover:bg-orange-50 border border-[#e6d5c3] hover:border-orange-400 rounded-xl px-3.5 py-2.5 text-left transition">
+                        <span class="text-xs md:text-sm font-bold text-[#2c2522]">🟠 웨이팅 있음</span>
+                        <span id="cnt-waiting" class="text-xs font-bold text-orange-700">0</span>
+                    </button>
+
+                    <button type="button" onclick="submitCrowdVote('crowded')" data-level="crowded"
+                        class="crowd-btn flex items-center justify-between bg-[#faf8f5] hover:bg-rose-50 border border-[#e6d5c3] hover:border-rose-400 rounded-xl px-3.5 py-2.5 text-left transition">
+                        <span class="text-xs md:text-sm font-bold text-[#2c2522]">🔴 매우 붐빔</span>
+                        <span id="cnt-crowded" class="text-xs font-bold text-rose-700">0</span>
+                    </button>
+                </div>
+            </div>
+        </section>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white p-5 rounded-2xl border border-[#e8e2d8] flex items-center justify-between shadow-sm">
@@ -416,5 +494,125 @@
             trackVisits();
             fetchEvents();
             fetchMainCoupons();
+            const CROWD_META = {
+                relaxed: { emoji: '🟢', title: '현재 황리단길은 여유로운 편이에요', desc: '골목 산책과 카페·식당 이용이 수월한 분위기입니다.' },
+                normal:  { emoji: '🟡', title: '현재 황리단길은 보통 수준이에요', desc: '적당히 활기찬 분위기로 인기 매장만 일부 대기가 있을 수 있어요.' },
+                waiting: { emoji: '🟠', title: '현재 황리단길 인기 매장은 웨이팅이 있어요', desc: '유명 맛집·카페는 캐치테이블/현장 대기를 미리 확인해 주세요.' },
+                crowded: { emoji: '🔴', title: '현재 황리단길이 매우 붐비고 있어요', desc: '골목과 주차장이 혼잡하니 대중교통이나 도보 이동을 추천해요.' }
+            };
+
+            function getCrowdDeviceId() {
+                const key = 'todaygyeongju_device_id';
+                let id = localStorage.getItem(key);
+                if (!id) {
+                    id = crypto.randomUUID();
+                    localStorage.setItem(key, id);
+                }
+                return id;
+            }
+
+            function getTimeBasedEstimate() {
+                const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+                const day = nowKst.getUTCDay(); // 0:일 ~ 6:토
+                const hour = nowKst.getUTCHours();
+                const isWeekend = (day === 0 || day === 6);
+
+                if (hour < 10 || hour >= 22) {
+                    return { emoji: '🟢', title: '지금은 한산한 시간대예요 (제보 대기 중)', desc: '아직 최근 1시간 현장 제보가 없어요. 첫 번째로 현장 분위기를 눌러주세요!' };
+                }
+                if (isWeekend && hour >= 12 && hour <= 18) {
+                    return { emoji: '🟠', title: '주말 피크 시간대라 붐빌 가능성이 높아요', desc: '최근 1시간 제보가 아직 없어요. 현장에 계시다면 아래 버튼으로 알려주세요!' };
+                }
+                return { emoji: '🟡', title: '평소 기준 적당히 활기찬 시간대예요', desc: '최근 1시간 제보가 아직 없어요. 현장에 계시다면 아래 버튼으로 알려주세요!' };
+            }
+
+            async function loadCrowdStatus() {
+                const metaEl = document.getElementById('crowdVoteMeta');
+                const emojiEl = document.getElementById('crowdMainEmoji');
+                const titleEl = document.getElementById('crowdMainTitle');
+                const descEl = document.getElementById('crowdMainDesc');
+                if (!titleEl) return;
+
+                try {
+                    const sb = getSupabaseClient();
+                    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+                    const { data, error } = await sb
+                        .from('crowd_votes')
+                        .select('level')
+                        .gte('created_at', oneHourAgo);
+
+                    if (error) throw error;
+
+                    const counts = { relaxed: 0, normal: 0, waiting: 0, crowded: 0 };
+                    (data || []).forEach(row => {
+                        if (counts[row.level] !== undefined) counts[row.level] += 1;
+                    });
+
+                    Object.keys(counts).forEach(k => {
+                        const el = document.getElementById('cnt-' + k);
+                        if (el) el.textContent = counts[k];
+                    });
+
+                    const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
+
+                    if (totalVotes === 0) {
+                        const est = getTimeBasedEstimate();
+                        emojiEl.textContent = est.emoji;
+                        titleEl.textContent = est.title;
+                        descEl.textContent = est.desc;
+                        metaEl.textContent = '최근 1시간 제보 0건';
+                        return;
+                    }
+
+                    // 가장 많이 선택된 단계 찾기 (동률이면 더 혼잡한 쪽 우선)
+                    const priority = ['crowded', 'waiting', 'normal', 'relaxed'];
+                    let topLevel = 'normal';
+                    let topCount = -1;
+                    priority.forEach(lvl => {
+                        if (counts[lvl] > topCount) {
+                            topCount = counts[lvl];
+                            topLevel = lvl;
+                        }
+                    });
+
+                    const info = CROWD_META[topLevel];
+                    emojiEl.textContent = info.emoji;
+                    titleEl.textContent = info.title;
+                    descEl.textContent = info.desc;
+                    metaEl.textContent = `최근 1시간 현장 제보 ${totalVotes}건 반영`;
+                } catch (err) {
+                    console.error('혼잡도 불러오기 실패:', err);
+                }
+            }
+
+            window.submitCrowdVote = async (level) => {
+                const lastVoteAt = Number(localStorage.getItem('tg_last_crowd_vote_at') || 0);
+                const cooldownMs = 30 * 60 * 1000; // 30분
+                if (Date.now() - lastVoteAt < cooldownMs) {
+                    const remainMin = Math.ceil((cooldownMs - (Date.now() - lastVoteAt)) / 60000);
+                    alert(`현장 제보는 30분마다 참여할 수 있습니다. (${remainMin}분 후 다시 참여 가능)`);
+                    return;
+                }
+
+                try {
+                    const sb = getSupabaseClient();
+                    const { error } = await sb.from('crowd_votes').insert([{
+                        level,
+                        device_id: getCrowdDeviceId()
+                    }]);
+
+                    if (error) throw error;
+
+                    localStorage.setItem('tg_last_crowd_vote_at', String(Date.now()));
+                    await loadCrowdStatus();
+                    alert('소중한 현장 제보 감사합니다! 실시간 현황에 바로 반영되었어요.');
+                } catch (err) {
+                    console.error('혼잡도 투표 실패:', err);
+                    alert('제보 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                }
+            };
+
+            loadCrowdStatus();
         })();
     </script>
