@@ -12,6 +12,8 @@
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #faf8f5; color: #2c2522; }
         .font-batang { font-family: 'Gowun Batang', serif; }
+   .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -38,6 +40,38 @@
 
     <!-- 메인 컨텐츠 영역 -->
     <main class="flex-grow">
+
+        <!-- 최상단: 황리단길 대표 맛집, 할인 쿠폰북 -->
+        <section id="coupons" class="max-w-6xl mx-auto px-4 pt-4 pb-6 md:pt-6 md:pb-10">
+            <div class="bg-gradient-to-br from-[#fbf5ec] to-[#f3e5d2] border border-[#e3d0b9] rounded-2xl p-5 md:p-8 shadow-sm">
+                <!-- 상단 타이틀 + 전체보기 버튼 한 줄 배치 -->
+                <div class="flex items-end justify-between gap-3 mb-4 md:mb-6">
+                    <div>
+                        <span class="inline-block text-[11px] font-bold text-[#8c4a32] bg-white/80 px-2.5 py-0.5 rounded-full border border-[#e3d0b9] tracking-wider uppercase mb-1.5">
+                            ANALOG COUPON BOOK
+                        </span>
+                        <h2 class="text-xl md:text-2xl font-bold font-batang text-[#2c2522] leading-snug">
+                            황리단길 대표 맛집<span class="hidden md:inline">, </span><br class="md:hidden">
+                            할인 쿠폰북
+                        </h2>
+                        <p class="text-xs md:text-sm text-[#6b5b4d] mt-1">
+                            경주 엄선된 매장에서 바로 쓸 수 있는 쿠폰북입니다.
+                        </p>
+                    </div>
+
+                    <a href="coupons.html" class="shrink-0 bg-[#8c4a32] hover:bg-[#733b27] text-white text-xs md:text-sm font-bold px-3.5 py-2.5 md:px-5 md:py-2.5 rounded-xl shadow-sm transition">
+                        전체 보기 &rarr;
+                    </a>
+                </div>
+
+                <!-- 모바일: 가로 스와이프 카드 / PC: 3열 그리드 -->
+                <div id="main-coupons-container" class="flex md:grid md:grid-cols-3 gap-3.5 md:gap-5 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1">
+                    <div class="w-full md:col-span-3 text-center py-6 text-gray-500 text-xs md:text-sm">
+                        쿠폰북 목록을 불러오는 중입니다...
+                    </div>
+                </div>
+            </div>
+        </section>
         
       <!-- 히어로 섹션 (일러스트 배너 영상) -->
         <section class="max-w-6xl mx-auto px-4 pt-6 pb-8">
@@ -107,31 +141,6 @@
                 <div class="col-span-1 md:col-span-3 text-center py-10 text-gray-500">
                     실시간 행사 정보를 불러오는 중입니다...
                 </div>
-            </div>
-        </section>
-
-     <!-- 아날로그 쿠폰북 안내 섹션 -->
-        <section id="coupons" class="max-w-6xl mx-auto px-4 mb-16">
-            <div class="bg-[#f4ebd9]/60 border border-[#e6d5c3] rounded-2xl p-8 md:p-12 text-center flex flex-col items-center justify-center">
-                <div class="w-full text-center">
-                    <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">ANALOG COUPON BOOK</span>
-                    <h2 class="text-2xl font-bold font-batang mt-1 mb-2 leading-snug">
-                        황리단길 대표 맛집<span class="hidden md:inline">, </span><br class="md:hidden">
-                        할인 쿠폰북
-                    </h2>
-                    <p class="text-sm text-gray-600 max-w-xl mx-auto mb-8">경주 엄선된 매장에서 바로 쓸 수 있는 쿠폰북입니다.</p>
-                </div>
-
-                <!-- 메인에 함께 표시되는 쿠폰북 리스트 -->
-                <div id="main-coupons-container" class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full text-left mb-8">
-                    <div class="col-span-1 md:col-span-3 text-center py-6 text-gray-500 text-sm">
-                        쿠폰북 목록을 불러오는 중입니다...
-                    </div>
-                </div>
-
-                <a href="coupons.html" class="inline-block bg-[#8c4a32] hover:bg-[#733b27] text-white px-8 py-3 rounded-xl font-medium shadow-md transition">
-                    쿠폰북 전체 보기 &rarr;
-                </a>
             </div>
         </section>
 
@@ -263,7 +272,7 @@
                 }
             }
 
-            async function fetchMainCoupons() {
+           async function fetchMainCoupons() {
                 const container = document.getElementById('main-coupons-container');
                 if (!container) return;
 
@@ -277,7 +286,7 @@
                     if (error) throw error;
 
                     if (!coupons || coupons.length === 0) {
-                        container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-6 text-gray-500 text-sm">현재 등록된 쿠폰이 없습니다.</div>';
+                        container.innerHTML = '<div class="w-full md:col-span-3 text-center py-6 text-gray-500 text-xs md:text-sm">현재 등록된 쿠폰이 없습니다.</div>';
                         return;
                     }
 
@@ -291,36 +300,54 @@
                         const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
                         const isSoldOut = hasLimit && remaining === 0;
                         const isClosed = isExpired || isSoldOut;
-                       const storeImgs = Array.isArray(cp.store_images) ? cp.store_images.filter(u => /^https?:\/\//.test(u)) : [];
-const safeImg = storeImgs[0] ? esc(storeImgs[0]) : (cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '');
+
+                        const storeImgs = Array.isArray(cp.store_images)
+                            ? cp.store_images.filter(u => /^https?:\/\//.test(u))
+                            : [];
+                        const safeImg = storeImgs[0]
+                            ? esc(storeImgs[0])
+                            : (cp.image_url && /^https?:\/\//.test(cp.image_url) ? esc(cp.image_url) : '');
+
                         const validText = cp.valid_until ? `${cp.valid_until.replace(/-/g, '.')}까지` : '상시 사용';
 
                         const statusBadge = isExpired
-                            ? `<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">${hasLimit ? '기간 만료' : `만료 · ${issued}명 다운`}</span>`
+                            ? `<span class="text-[10px] md:text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">${hasLimit ? '기간 만료' : `만료 · ${issued}명`}</span>`
                             : (isSoldOut
-                                ? '<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">선착순 마감</span>'
+                                ? '<span class="text-[10px] md:text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">선착순 마감</span>'
                                 : (hasLimit
-                                    ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">선착순 ${remaining}개 남음</span>`
-                                    : `<span class="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">${cp.valid_until ? '유효기간' : '상시'} · ${issued}명 다운</span>`));
+                                    ? `<span class="text-[10px] md:text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">선착순 ${remaining}개 남음</span>`
+                                    : `<span class="text-[10px] md:text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">${cp.valid_until ? '유효기간' : '상시'} · ${issued}명 다운</span>`));
 
                         return `
-                            <a href="coupons.html" class="block bg-white rounded-xl overflow-hidden shadow-sm border border-[#e8e2d8] hover:shadow-md transition ${isClosed ? 'opacity-75' : ''}">
-                                ${safeImg ? `<img src="${safeImg}" alt="${esc(cp.store_name)}" class="w-full h-40 object-cover">` : ''}
-                                <div class="p-4">
-                                    <div class="flex items-center justify-between gap-2 mb-2">
-                                        <span class="inline-block text-xs bg-[#8c4a32] text-white px-2.5 py-0.5 rounded-full font-semibold">${esc(cp.discount_info)}</span>
-                                        ${statusBadge}
+                            <a href="coupons.html" class="shrink-0 w-[74%] sm:w-[46%] md:w-auto snap-start block bg-white rounded-xl overflow-hidden shadow-sm border border-[#e6d5c3] hover:shadow-md transition ${isClosed ? 'opacity-75' : ''}">
+                                ${safeImg ? `
+                                    <div class="relative h-28 md:h-36 bg-[#f4ebd9]">
+                                        <img src="${safeImg}" loading="lazy" alt="${esc(cp.store_name)}" class="w-full h-full object-cover">
+                                        <span class="absolute top-2 left-2 text-[11px] font-bold bg-[#8c4a32] text-white px-2.5 py-0.5 rounded-full shadow-sm">
+                                            ${esc(cp.discount_info)}
+                                        </span>
                                     </div>
-                                    <h4 class="font-bold text-base font-batang text-[#2f261f] truncate">${esc(cp.store_name)}</h4>
-                                    <p class="text-[11px] text-[#8c4a32] font-semibold mt-1">📅 ${esc(validText)}</p>
-                                    ${cp.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-2">${esc(cp.description)}</p>` : ''}
+                                ` : `
+                                    <div class="px-3.5 pt-3.5">
+                                        <span class="inline-block text-[11px] font-bold bg-[#8c4a32] text-white px-2.5 py-0.5 rounded-full">
+                                            ${esc(cp.discount_info)}
+                                        </span>
+                                    </div>
+                                `}
+                                <div class="p-3.5 md:p-4">
+                                    <div class="flex items-center justify-between gap-1.5 mb-1">
+                                        <h4 class="font-bold text-sm md:text-base font-batang text-[#2f261f] truncate">${esc(cp.store_name)}</h4>
+                                        <span class="shrink-0">${statusBadge}</span>
+                                    </div>
+                                    <p class="text-[11px] text-[#8c4a32] font-semibold">📅 ${esc(validText)}</p>
+                                    ${cp.description ? `<p class="text-[11px] md:text-xs text-gray-500 mt-1 line-clamp-1">${esc(cp.description)}</p>` : ''}
                                 </div>
                             </a>
                         `;
                     }).join('');
                 } catch (error) {
                     console.error('쿠폰 목록 불러오기 실패:', error);
-                    container.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-6 text-gray-500 text-sm">쿠폰북을 보려면 아래 버튼을 눌러주세요.</div>';
+                    container.innerHTML = '<div class="w-full md:col-span-3 text-center py-6 text-gray-500 text-xs md:text-sm">쿠폰북을 보려면 전체 보기를 눌러주세요.</div>';
                 }
             }
 
