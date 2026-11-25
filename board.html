@@ -189,6 +189,13 @@
             return 'bg-[#f4ebd9] text-[#8c4a32]';
         }
 
+        function getPostCommentCount(post) {
+            if (Array.isArray(post.board_comments) && post.board_comments[0]) {
+                return Number(post.board_comments[0].count || 0);
+            }
+            return Number(post._commentCount || 0);
+        }
+
         // 카테고리 탭 전환
         document.getElementById('categoryTabs').addEventListener('click', (e) => {
             const btn = e.target.closest('.cat-btn');
@@ -212,7 +219,7 @@
             const listEl = document.getElementById('postList');
             const { data, error } = await sb
                 .from('board_posts')
-                .select('*')
+                .select('*, board_comments(count)')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -220,7 +227,12 @@
                 return;
             }
 
-            allPosts = data || [];
+            allPosts = (data || []).map(p => ({
+                ...p,
+                _commentCount: Array.isArray(p.board_comments) && p.board_comments[0]
+                    ? Number(p.board_comments[0].count || 0)
+                    : 0
+            }));
             renderPosts();
         }
 
@@ -248,6 +260,7 @@
 
             listEl.innerHTML = filtered.map(post => {
                 const hasImg = post.image_url && /^https?:\/\//.test(post.image_url);
+                const cmtCount = getPostCommentCount(post);
                 return `
                     <article onclick="openDetailModal(${post.id})" class="bg-white border border-[#e8e2d8] hover:border-[#c9b399] rounded-2xl p-4 md:p-5 shadow-xs hover:shadow-sm transition cursor-pointer flex items-center justify-between gap-4">
                         <div class="min-w-0 flex-1">
@@ -257,9 +270,16 @@
                                 </span>
                                 <span class="text-xs text-gray-400">${esc(post.nickname)} · ${formatDate(post.created_at)}</span>
                             </div>
-                            <h2 class="text-base md:text-lg font-bold text-[#2c2522] truncate mb-1">
-                                ${esc(post.title)}
-                            </h2>
+                            <div class="flex items-center gap-2 mb-1">
+                                <h2 class="text-base md:text-lg font-bold text-[#2c2522] truncate">
+                                    ${esc(post.title)}
+                                </h2>
+                                ${cmtCount > 0 ? `
+                                    <span class="shrink-0 inline-flex items-center gap-0.5 text-xs font-bold text-[#8c4a32] bg-[#f4ebd9] px-2 py-0.5 rounded-full">
+                                        💬 ${cmtCount}
+                                    </span>
+                                ` : ''}
+                            </div>
                             <p class="text-xs md:text-sm text-gray-500 line-clamp-1">
                                 ${esc(post.content)}
                             </p>
@@ -387,6 +407,14 @@
 
             const comments = data || [];
             countEl.textContent = comments.length;
+
+            // 목록 카드의 댓글 숫자도 즉시 동기화
+            const targetPost = allPosts.find(p => p.id === postId);
+            if (targetPost) {
+                targetPost._commentCount = comments.length;
+                targetPost.board_comments = [{ count: comments.length }];
+                renderPosts();
+            }
 
             if (comments.length === 0) {
                 listEl.innerHTML = '<div class="text-xs text-gray-400 py-2">첫 댓글을 남겨보세요!</div>';
