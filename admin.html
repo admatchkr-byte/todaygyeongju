@@ -96,6 +96,19 @@
       background: #fcf9f4; border: 1px dashed var(--border); border-radius: 10px; padding: 12px; margin-top: 12px;
     }
     .upload-box label { margin-top: 0; }
+
+    .post-block {
+      padding: 16px 0; border-bottom: 1px solid var(--border);
+    }
+    .post-block:last-child { border-bottom: none; }
+    .admin-cmt-list {
+      margin-top: 10px; margin-left: 14px; padding-left: 12px;
+      border-left: 2px solid #e6dccf; display: flex; flex-direction: column; gap: 6px;
+    }
+    .admin-cmt-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      background: #faf6f0; padding: 8px 12px; border-radius: 8px; font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -123,7 +136,7 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="events-tab">행사 관리</button>
         <button class="tab-btn" data-tab="coupons-tab">쿠폰 관리</button>
-        <button class="tab-btn" data-tab="community-tab">채팅/게시판 관리</button>
+        <button class="tab-btn" data-tab="community-tab">게시판 관리</button>
       </div>
 
       <!-- 행사 관리 탭 -->
@@ -250,21 +263,17 @@
         </div>
       </div>
 
-      <!-- 채팅/게시판 관리 탭 -->
+      <!-- 게시판 & 댓글 관리 탭 -->
       <div id="community-tab" class="hidden">
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
-            <h2 style="border:none; padding:0; margin:0;">💬 최근 실시간 채팅 (최신 30건)</h2>
-            <button type="button" class="secondary" style="padding:6px 12px; font-size:12px;" onclick="loadAdminChats()">새로고침</button>
+            <h2 style="border:none; padding:0; margin:0;">📝 자유게시판 글 & 댓글 관리</h2>
+            <div style="display:flex; gap:6px;">
+              <a href="chat.html" target="_blank" style="text-decoration:none; background:#f3e8dc; color:var(--accent); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;">💬 채팅방 바로가기</a>
+              <button type="button" class="secondary" style="padding:6px 12px; font-size:12px;" onclick="loadAdminPosts()">새로고침</button>
+            </div>
           </div>
-          <div id="admin-chats-list">불러오는 중...</div>
-        </div>
-
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
-            <h2 style="border:none; padding:0; margin:0;">📝 자유게시판 글 관리</h2>
-            <button type="button" class="secondary" style="padding:6px 12px; font-size:12px;" onclick="loadAdminPosts()">새로고침</button>
-          </div>
+          <p class="hint" style="margin-top:0; margin-bottom:12px;">※ 실시간 채팅 삭제는 로그인된 상태에서 <strong>실시간 채팅방(chat.html)</strong>에 들어가시면 각 말풍선 옆에서 바로 삭제하실 수 있습니다.</p>
           <div id="admin-posts-list">불러오는 중...</div>
         </div>
       </div>
@@ -300,7 +309,6 @@
         document.getElementById('coupons-tab').classList.toggle('hidden', btn.dataset.tab !== 'coupons-tab');
         document.getElementById('community-tab').classList.toggle('hidden', btn.dataset.tab !== 'community-tab');
         if (btn.dataset.tab === 'community-tab') {
-          loadAdminChats();
           loadAdminPosts();
         }
       });
@@ -807,73 +815,67 @@
       }
     };
 
-    // 채팅 & 자유게시판 관리자 삭제 기능
-    window.loadAdminChats = async () => {
-      const box = document.getElementById('admin-chats-list');
-      const { data, error } = await sb
-        .from('chat_messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(30);
-
-      if (error) return (box.textContent = '불러오기 실패: ' + error.message);
-      if (!data.length) return (box.textContent = '등록된 채팅 메시지가 없습니다.');
-
-      box.innerHTML = data.map(m => `
-        <div class="item">
-          <div class="item-info">
-            <div>
-              <strong>${escapeHtml(m.nickname)}</strong>
-              <span style="font-size:11px;color:#7a6c5d;margin-left:6px;">${new Date(m.created_at).toLocaleString('ko-KR')}</span>
-            </div>
-            <div style="font-size:13px;color:#2f261f;margin-top:4px;word-break:break-word;">${escapeHtml(m.message)}</div>
-          </div>
-          <div class="actions">
-            <button class="danger" onclick="deleteAdminChat(${m.id})">삭제</button>
-          </div>
-        </div>
-      `).join('');
-    };
-
-    window.deleteAdminChat = async (id) => {
-      if (!confirm('이 채팅 메시지를 삭제할까요?')) return;
-      const { error } = await sb.from('chat_messages').delete().eq('id', id);
-      if (error) alert('삭제 실패: ' + error.message);
-      else loadAdminChats();
-    };
-
+    // 자유게시판 글 & 댓글 통합 관리
     window.loadAdminPosts = async () => {
       const box = document.getElementById('admin-posts-list');
       const { data, error } = await sb
         .from('board_posts')
-        .select('*')
+        .select('*, board_comments(id, nickname, content, created_at)')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) return (box.textContent = '불러오기 실패: ' + error.message);
       if (!data.length) return (box.textContent = '등록된 게시글이 없습니다.');
 
-      box.innerHTML = data.map(p => `
-        <div class="item">
-          <div class="item-info">
-            <div>
-              <span class="badge">${escapeHtml(p.category)}</span>
-              <strong>${escapeHtml(p.title)}</strong>
+      box.innerHTML = data.map(p => {
+        const comments = (p.board_comments || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        return `
+          <div class="post-block">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div class="item-info">
+                <div>
+                  <span class="badge">${escapeHtml(p.category)}</span>
+                  <strong>${escapeHtml(p.title)}</strong>
+                  <span style="font-size:12px;color:#8c5230;font-weight:700;margin-left:4px;">(${comments.length})</span>
+                </div>
+                <div style="font-size:12px;color:#7a6c5d;margin-top:4px;">
+                  작성자: ${escapeHtml(p.nickname)} · ${new Date(p.created_at).toLocaleString('ko-KR')}
+                </div>
+              </div>
+              <div class="actions">
+                <button class="danger" onclick="deleteAdminPost(${p.id})">글 삭제</button>
+              </div>
             </div>
-            <div style="font-size:12px;color:#7a6c5d;margin-top:4px;">
-              작성자: ${escapeHtml(p.nickname)} · ${new Date(p.created_at).toLocaleString('ko-KR')}
-            </div>
+
+            ${comments.length > 0 ? `
+              <div class="admin-cmt-list">
+                ${comments.map(c => `
+                  <div class="admin-cmt-row">
+                    <div style="min-width:0; flex:1;">
+                      <strong>💬 ${escapeHtml(c.nickname)}</strong>
+                      <span style="color:#7a6c5d; margin-left:6px;">${new Date(c.created_at).toLocaleString('ko-KR')}</span>
+                      <div style="margin-top:3px; color:#2f261f; word-break:break-word;">${escapeHtml(c.content)}</div>
+                    </div>
+                    <button class="danger" style="padding:4px 9px; font-size:11px;" onclick="deleteAdminComment(${c.id})">댓글 삭제</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
           </div>
-          <div class="actions">
-            <button class="danger" onclick="deleteAdminPost(${p.id})">삭제</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     };
 
     window.deleteAdminPost = async (id) => {
       if (!confirm('이 게시글과 댓글을 모두 삭제할까요?')) return;
       const { error } = await sb.from('board_posts').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else loadAdminPosts();
+    };
+
+    window.deleteAdminComment = async (id) => {
+      if (!confirm('이 댓글을 삭제할까요?')) return;
+      const { error } = await sb.from('board_comments').delete().eq('id', id);
       if (error) alert('삭제 실패: ' + error.message);
       else loadAdminPosts();
     };
