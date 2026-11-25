@@ -53,11 +53,24 @@
                 <!-- 영상 위 검은색 그라데이션 및 텍스트 덮어씌우기 -->
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-6 md:p-10 text-white z-10">
                     <span class="text-xs md:text-sm tracking-widest text-[#f3d5b5] font-semibold uppercase mb-1">TODAY GYEONGJU PLATFORM</span>
-                    <h1 class="text-2xl md:text-4xl font-bold font-batang mb-2">오늘, 경주에서 가장 특별한 순간</h1>
+                   <h1 class="text-[19px] sm:text-2xl md:text-4xl font-bold font-batang text-white whitespace-nowrap tracking-tight">
+    오늘, 경주에서 가장 특별한 순간
+</h1>
                     <p class="text-sm md:text-base text-gray-200">황리단길 실시간 상황부터 오늘 열리는 행사, 검증된 로컬 혜택까지 한눈에 확인하세요.</p>
                 </div>
             </div>
         </section>
+
+        <!-- 전체 방문수 / 오늘 하루 방문수 (작고 심플한 상태 바) -->
+        <div class="max-w-6xl mx-auto px-4 mt-3 mb-2">
+            <div class="flex items-center justify-end">
+                <div class="inline-flex items-center gap-3 bg-white/90 border border-[#e6d5c3] rounded-full px-3.5 py-1 text-[11px] text-[#6b5b4d] shadow-xs">
+                    <span>전체 방문수 <strong id="total-visit-count" class="text-[#8c4a32] font-bold">-</strong>명</span>
+                    <span class="text-[#dfd2c3]">|</span>
+                    <span>오늘 하루 방문수 <strong id="today-visit-count" class="text-[#8c4a32] font-bold">-</strong>명</span>
+                </div>
+            </div>
+        </div>
 
          <!-- 최상단: 황리단길 대표 맛집, 할인 쿠폰북 -->
         <section id="coupons" class="max-w-6xl mx-auto px-4 pt-4 pb-6 md:pt-6 md:pb-10">
@@ -351,6 +364,36 @@
                 }
             }
 
+            async function trackVisits() {
+                const totalEl = document.getElementById('total-visit-count');
+                const todayEl = document.getElementById('today-visit-count');
+                if (!totalEl || !todayEl) return;
+
+                try {
+                    const sb = getSupabaseClient();
+                    const todayKey = 'tg_visited_' + getTodayKst();
+                    const alreadyVisitedToday = localStorage.getItem(todayKey) === '1';
+
+                    const { data, error } = await sb.rpc('record_visit', {
+                        p_should_increment: !alreadyVisitedToday
+                    });
+
+                    if (error) throw error;
+
+                    if (!alreadyVisitedToday) {
+                        localStorage.setItem(todayKey, '1');
+                    }
+
+                    if (data) {
+                        totalEl.textContent = Number(data.total || 0).toLocaleString();
+                        todayEl.textContent = Number(data.today || 0).toLocaleString();
+                    }
+                } catch (err) {
+                    console.error('방문자 집계 실패:', err);
+                }
+            }
+
+            trackVisits();
             fetchEvents();
             fetchMainCoupons();
         })();
