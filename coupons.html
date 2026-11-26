@@ -21,9 +21,6 @@
         button:disabled {
             cursor: not-allowed;
         }
-        .coupon-progress {
-            transition: width 0.3s ease;
-        }
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -37,57 +34,60 @@
 
     <!-- 상단 네비게이션 -->
     <header class="bg-white/85 backdrop-blur-md border-b border-[#e8e2d8] sticky top-0 z-40">
-        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="max-w-5xl mx-auto px-4 h-14 md:h-16 flex items-center justify-between">
             <div class="flex items-center space-x-2">
-                <a href="index.html" class="text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
-                <span class="text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">쿠폰북 지갑</span>
+                <a href="index.html" class="text-lg md:text-xl font-bold font-batang text-[#8c4a32]">오늘, 경주</a>
+                <span class="text-[11px] md:text-xs bg-[#f4ebd9] text-[#8c4a32] px-2 py-0.5 rounded-full font-medium">쿠폰북 지갑</span>
             </div>
-            <a href="index.html" class="text-sm font-medium text-[#8c4a32] hover:underline">← 메인으로 돌아가기</a>
+            <a href="index.html" class="text-xs md:text-sm font-medium text-[#8c4a32] hover:underline">← 메인으로</a>
         </div>
     </header>
 
     <!-- 쿠폰 목록 -->
-    <main class="max-w-4xl mx-auto px-4 py-10 flex-grow w-full">
-        <div class="text-center mb-6">
-            <span class="text-xs font-semibold text-[#8c4a32] tracking-wider uppercase">
+    <main class="max-w-4xl mx-auto px-3 sm:px-4 py-7 md:py-10 flex-grow w-full">
+        <div class="text-center mb-5">
+            <span class="text-[11px] font-semibold text-[#8c4a32] tracking-wider uppercase">
                 ANALOG COUPON BOOK
             </span>
-            <h1 class="text-3xl font-bold font-batang mt-1 mb-2 leading-snug">
+            <h1 class="text-2xl md:text-3xl font-bold font-batang mt-1 mb-1.5 leading-snug">
                 황리단길 대표 맛집<span class="hidden md:inline">, </span><br class="md:hidden">
                 할인 쿠폰북
             </h1>
-            <p class="text-sm text-gray-600">
+            <p class="text-xs md:text-sm text-gray-600">
                 경주 엄선된 매장에서 바로 쓸 수 있는 쿠폰북입니다.
             </p>
         </div>
 
         <!-- 5개 카테고리 필터 탭 -->
-        <div id="couponCategoryTabs" class="flex flex-wrap justify-center gap-2 mb-7">
-            <button type="button" data-cat="전체" class="cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white shadow-sm transition">
+        <div id="couponCategoryTabs" class="flex flex-wrap justify-center gap-1.5 md:gap-2 mb-6">
+            <button type="button" data-cat="전체" class="cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white shadow-sm transition">
                 전체
             </button>
-            <button type="button" data-cat="맛집" class="cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
+            <button type="button" data-cat="맛집" class="cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
                 맛집
             </button>
-            <button type="button" data-cat="카페·디저트" class="cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
+            <button type="button" data-cat="카페·디저트" class="cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
                 카페·디저트
             </button>
-            <button type="button" data-cat="숙소" class="cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
+            <button type="button" data-cat="숙소" class="cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
                 숙소
             </button>
-            <button type="button" data-cat="체험·쇼핑" class="cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
+            <button type="button" data-cat="체험·쇼핑" class="cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition">
                 체험·쇼핑
             </button>
         </div>
 
-        <!-- 쿠폰 카드 영역 (모바일 2열 · PC 3열 한눈에 보기 그리드) -->
-        <div id="couponGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
-            <div class="col-span-2 md:col-span-3 text-center py-12 text-gray-500 text-sm">
+        <!-- 3x3 바둑판 쿠폰 그리드 (모바일·PC 모두 가로 3칸) -->
+        <div id="couponGrid" class="grid grid-cols-3 gap-2 sm:gap-3.5 md:gap-5">
+            <div class="col-span-3 text-center py-12 text-gray-500 text-xs md:text-sm">
                 쿠폰 목록을 불러오는 중입니다...
             </div>
         </div>
 
-        <p id="pageStatus" class="text-center text-xs text-gray-500 mt-6" aria-live="polite">
+        <!-- 페이지네이션 (1, 2, 3...) -->
+        <div id="paginationWrap" class="mt-7 flex items-center justify-center gap-1.5"></div>
+
+        <p id="pageStatus" class="text-center text-[11px] md:text-xs text-gray-500 mt-4" aria-live="polite">
             쿠폰 잔여 수량은 실시간으로 반영됩니다.
         </p>
     </main>
@@ -110,7 +110,8 @@
                 <h3 id="modalName" class="text-2xl font-bold font-batang text-[#2c2522] mb-2"></h3>
 
                 <div id="modalDiscount" class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl py-3 px-4 mb-2 font-bold text-lg"></div>
-                <p id="modalValidUntil" class="text-xs text-[#6b5b4d] font-semibold mb-3"></p>
+                <p id="modalValidUntil" class="text-xs text-[#6b5b4d] font-semibold mb-1.5"></p>
+                <p id="modalDesc" class="text-xs text-gray-500 mb-3"></p>
                 <p id="modalStatus" class="text-sm text-[#8c4a32] font-semibold mb-4"></p>
 
                 <img id="couponImage" class="hidden w-full rounded-xl border border-[#d2c4b4] mb-5" alt="발급된 쿠폰 이미지">
@@ -133,8 +134,10 @@
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
 
+        const ITEMS_PER_PAGE = 9; // 3 x 3 바둑판 (한 페이지당 9개)
         let couponList = [];
         let currentCategory = '전체';
+        let currentPage = 1;
         let lastCouponSignature = '';
         let currentAsset = null;
         let activeModalCouponId = null;
@@ -144,13 +147,6 @@
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
         const getTodayKst = () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-        function getCategoryBadgeStyle(cat) {
-            if (cat === '카페·디저트') return 'bg-amber-100 text-amber-800';
-            if (cat === '숙소') return 'bg-indigo-100 text-indigo-800';
-            if (cat === '체험·쇼핑') return 'bg-emerald-100 text-emerald-800';
-            return 'bg-[#f4ebd9] text-[#8c4a32]';
-        }
 
         function getDeviceId() {
             const key = 'todaygyeongju_device_id';
@@ -179,17 +175,23 @@
             const btn = e.target.closest('.cp-cat-btn');
             if (!btn) return;
             currentCategory = btn.dataset.cat;
+            currentPage = 1;
             document.querySelectorAll('.cp-cat-btn').forEach(b => {
                 const active = b.dataset.cat === currentCategory;
                 b.className = active
-                    ? 'cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white shadow-sm transition'
-                    : 'cp-cat-btn px-4 py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition';
+                    ? 'cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold bg-[#8c4a32] text-white shadow-sm transition'
+                    : 'cp-cat-btn px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold bg-white text-[#6b5b4d] border border-[#e6d5c3] hover:bg-[#f4ebd9] transition';
             });
             renderCoupons();
         });
 
+        window.goToPage = (page) => {
+            currentPage = page;
+            renderCoupons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
         async function loadCoupons() {
-            const grid = document.getElementById('couponGrid');
             const { data, error } = await sb
                 .from('coupons')
                 .select('*')
@@ -224,6 +226,40 @@
             renderCoupons();
         }
 
+        function renderPagination(totalPages) {
+            const wrap = document.getElementById('paginationWrap');
+            if (totalPages <= 1) {
+                wrap.innerHTML = '';
+                return;
+            }
+
+            let html = `
+                <button type="button" onclick="goToPage(${Math.max(1, currentPage - 1)})" ${currentPage === 1 ? 'disabled' : ''}
+                    class="w-8 h-8 rounded-lg border border-[#e6d5c3] bg-white text-xs font-bold text-[#6b5b4d] disabled:opacity-40">
+                    ‹
+                </button>
+            `;
+
+            for (let p = 1; p <= totalPages; p++) {
+                const active = p === currentPage;
+                html += `
+                    <button type="button" onclick="goToPage(${p})"
+                        class="w-8 h-8 rounded-lg text-xs font-bold transition ${active ? 'bg-[#8c4a32] text-white shadow-xs' : 'bg-white border border-[#e6d5c3] text-[#6b5b4d] hover:bg-[#f4ebd9]'}">
+                        ${p}
+                    </button>
+                `;
+            }
+
+            html += `
+                <button type="button" onclick="goToPage(${Math.min(totalPages, currentPage + 1)})" ${currentPage === totalPages ? 'disabled' : ''}
+                    class="w-8 h-8 rounded-lg border border-[#e6d5c3] bg-white text-xs font-bold text-[#6b5b4d] disabled:opacity-40">
+                    ›
+                </button>
+            `;
+
+            wrap.innerHTML = html;
+        }
+
         function renderCoupons() {
             const grid = document.getElementById('couponGrid');
             const filtered = couponList.filter(cp => {
@@ -232,23 +268,27 @@
             });
 
             if (filtered.length === 0) {
+                document.getElementById('paginationWrap').innerHTML = '';
                 grid.innerHTML = `
-                    <div class="col-span-1 md:col-span-2 bg-white border border-dashed border-[#e6d5c3] rounded-2xl p-12 text-center text-gray-500 text-sm">
+                    <div class="col-span-3 bg-white border border-dashed border-[#e6d5c3] rounded-2xl p-10 text-center text-gray-500 text-xs md:text-sm">
                         '${esc(currentCategory)}' 카테고리에 등록된 쿠폰이 아직 없습니다.
                     </div>
                 `;
                 return;
             }
 
+            const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+            const pageItems = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
             const today = getTodayKst();
 
-            grid.innerHTML = filtered.map(cp => {
-                const cat = cp.category || '맛집';
+            grid.innerHTML = pageItems.map(cp => {
                 const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
                 const total = hasLimit ? Number(cp.total_quantity) : null;
                 const issued = cp.issued_quantity ?? 0;
                 const remaining = hasLimit ? Math.max(0, total - issued) : null;
-                const percentage = hasLimit && total > 0 ? Math.round((remaining / total) * 100) : 0;
 
                 const isExpired = Boolean(cp.valid_until && today > cp.valid_until);
                 const isSoldOut = hasLimit && remaining === 0;
@@ -259,93 +299,80 @@
                     ? cp.store_images.filter(u => /^https?:\/\//.test(u))
                     : (cp.image_url && /^https?:\/\//.test(cp.image_url) ? [cp.image_url] : []);
 
-                const validText = cp.valid_until ? `${cp.valid_until.replace(/-/g, '.')}까지 사용 가능` : '상시 사용 가능';
-
-                let statusHtml = '';
+                // 3x3 바둑판에 맞춘 한 줄 상태 요약
+                let subStatus = '';
                 if (isExpired) {
-                    statusHtml = `<p class="text-sm font-bold text-rose-700 mb-3">⏰ 유효기간 만료 (${esc(cp.valid_until)})</p>`;
+                    subStatus = `<p class="text-[10px] md:text-xs font-bold text-rose-600 truncate">기간 만료</p>`;
                 } else if (isSoldOut) {
-                    statusHtml = `<p class="text-sm font-bold text-rose-700 mb-3">🔒 선착순 마감됐습니다 (${total}개 소진)</p>`;
+                    subStatus = `<p class="text-[10px] md:text-xs font-bold text-rose-600 truncate">선착순 마감</p>`;
                 } else if (hasLimit) {
-                    statusHtml = `
-                        <p class="text-sm font-bold text-[#8c4a32] mb-2">🎟️ 선착순 ${remaining}개 남음 / ${total}개</p>
-                        <div class="w-full h-2 bg-[#f4ebd9] rounded-full overflow-hidden mb-3">
-                            <div class="coupon-progress h-full bg-[#8c4a32] rounded-full" style="width:${percentage}%"></div>
-                        </div>
-                    `;
+                    subStatus = `<p class="text-[10px] md:text-xs font-semibold text-[#8c4a32] truncate">잔여 ${remaining}/${total}개</p>`;
                 } else {
-                    statusHtml = `<p class="text-sm font-bold text-emerald-700 mb-3">✨ ${cp.valid_until ? '유효기간 쿠폰' : '상시 쿠폰'} · 현재 ${issued}명 다운로드</p>`;
+                    subStatus = `<p class="text-[10px] md:text-xs font-semibold text-emerald-700 truncate">${issued}명 다운</p>`;
                 }
 
-                let btnText = '쿠폰 받기 📥';
+                let btnText = '쿠폰 받기';
                 let btnDisabled = false;
                 let btnClass = 'bg-[#8c4a32] hover:bg-[#733b27] text-white';
 
                 if (isIssuing) {
-                    btnText = '발급 처리 중...';
+                    btnText = '발급 중';
                     btnDisabled = true;
                     btnClass = 'bg-[#f4ebd9] text-[#8c4a32]';
                 } else if (myClaim) {
-                    btnText = '내 쿠폰 다시 보기 🎟️';
+                    btnText = '내 쿠폰';
                     btnDisabled = false;
                     btnClass = 'bg-[#f4ebd9] hover:bg-[#e6d5c3] text-[#8c4a32] border border-[#d2c4b4]';
                 } else if (isExpired) {
-                    btnText = '기간 만료 🔒';
+                    btnText = '만료';
                     btnDisabled = true;
                     btnClass = 'bg-gray-200 text-gray-500';
                 } else if (isSoldOut) {
-                    btnText = '마감됐습니다 🔒';
+                    btnText = '마감';
                     btnDisabled = true;
                     btnClass = 'bg-gray-200 text-gray-500';
                 }
 
                 return `
-                    <div class="bg-white border-2 border-dashed border-[#d2c4b4] rounded-2xl p-5 md:p-6 shadow-sm flex flex-col justify-between">
-                        <div>
-                            <div class="flex flex-wrap justify-between items-center gap-1.5 mb-3">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-xs font-bold px-2.5 py-1 rounded ${getCategoryBadgeStyle(cat)}">
-                                        ${esc(cat)}
-                                    </span>
-                                    <span class="text-xs font-bold ${hasLimit ? 'text-emerald-700 bg-emerald-100' : 'text-amber-800 bg-amber-100'} px-2.5 py-1 rounded">
-                                        ${hasLimit ? '선착순 한정' : (cp.valid_until ? '유효기간' : '상시 혜택')}
-                                    </span>
-                                </div>
-                                <span class="text-lg font-bold text-[#8c4a32]">
-                                    ${esc(cp.discount_info)}
-                                </span>
-                            </div>
-
+                    <div class="bg-white border border-[#e6d5c3] rounded-xl md:rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between">
+                        <!-- 정사각형 매장 사진 (1:1 바둑판 비율) -->
+                        <div class="relative aspect-square w-full bg-[#f4ebd9] overflow-hidden">
                             ${storeImgs.length > 0 ? `
-                                <div class="relative mb-4 group">
-                                    <div id="slider-${cp.id}" onscroll="syncSliderDots(${cp.id}, ${storeImgs.length})" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar rounded-xl border border-[#e8e2d8] bg-[#faf8f5]">
-                                        ${storeImgs.map((url, idx) => `
-                                            <img src="${esc(url)}" loading="lazy" alt="${esc(cp.store_name)} 사진 ${idx + 1}" class="w-full h-48 object-cover shrink-0 snap-center">
+                                <div id="slider-${cp.id}" onscroll="syncSliderDots(${cp.id}, ${storeImgs.length})" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                                    ${storeImgs.map((url, idx) => `
+                                        <img src="${esc(url)}" loading="lazy" alt="${esc(cp.store_name)} ${idx + 1}" class="w-full h-full object-cover shrink-0 snap-center">
+                                    `).join('')}
+                                </div>
+                                ${storeImgs.length > 1 ? `
+                                    <div id="dots-${cp.id}" class="absolute bottom-1.5 inset-x-0 flex justify-center gap-1 pointer-events-none">
+                                        ${storeImgs.map((_, idx) => `
+                                            <span class="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full transition ${idx === 0 ? 'bg-white scale-125' : 'bg-white/55'}"></span>
                                         `).join('')}
                                     </div>
-                                    ${storeImgs.length > 1 ? `
-                                        <button type="button" onclick="slideStorePhoto(${cp.id}, -1)" aria-label="이전 사진" class="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/45 text-white text-sm font-bold flex items-center justify-center hover:bg-black/70">‹</button>
-                                        <button type="button" onclick="slideStorePhoto(${cp.id}, 1)" aria-label="다음 사진" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/45 text-white text-sm font-bold flex items-center justify-center hover:bg-black/70">›</button>
-                                        <div id="dots-${cp.id}" class="absolute bottom-2 inset-x-0 flex justify-center gap-1.5">
-                                            ${storeImgs.map((_, idx) => `
-                                                <span class="w-1.5 h-1.5 rounded-full transition ${idx === 0 ? 'bg-white scale-125' : 'bg-white/50'}"></span>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            ` : ''}
+                                ` : ''}
+                            ` : `
+                                <div class="w-full h-full flex items-center justify-center text-2xl md:text-3xl">🏯</div>
+                            `}
 
-                            <h3 class="font-batang font-bold text-xl mb-1">${esc(cp.store_name)}</h3>
-                            <p class="text-xs text-[#8c4a32] font-semibold mb-2">📅 ${esc(validText)}</p>
-                            ${cp.description ? `<p class="text-xs text-gray-500 mb-4 leading-relaxed">${esc(cp.description)}</p>` : '<div class="mb-4"></div>'}
+                            <!-- 할인 혜택 배지 -->
+                            <span class="absolute top-1.5 left-1.5 max-w-[88%] truncate text-[9px] sm:text-[11px] md:text-xs font-bold bg-[#8c4a32]/95 text-white px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs">
+                                ${esc(cp.discount_info)}
+                            </span>
                         </div>
 
-                        <div>
-                            ${statusHtml}
+                        <!-- 하단 매장명 + 상태 + 버튼 -->
+                        <div class="p-2 sm:p-3 flex flex-col justify-between flex-1">
+                            <div class="mb-1.5">
+                                <h3 class="font-batang font-bold text-xs sm:text-sm md:text-base text-[#2c2522] truncate">
+                                    ${esc(cp.store_name)}
+                                </h3>
+                                ${subStatus}
+                            </div>
+
                             <button
                                 onclick="handleCouponClick(${cp.id})"
                                 ${btnDisabled ? 'disabled' : ''}
-                                class="w-full ${btnClass} font-bold py-3 rounded-xl transition text-sm"
+                                class="w-full ${btnClass} font-bold py-1.5 md:py-2 rounded-lg transition text-[11px] sm:text-xs md:text-sm"
                             >
                                 ${btnText}
                             </button>
@@ -353,13 +380,9 @@
                     </div>
                 `;
             }).join('');
-        }
 
-        window.slideStorePhoto = (couponId, dir) => {
-            const el = document.getElementById('slider-' + couponId);
-            if (!el) return;
-            el.scrollBy({ left: dir * el.clientWidth, behavior: 'smooth' });
-        };
+            renderPagination(totalPages);
+        }
 
         window.syncSliderDots = (couponId, total) => {
             const el = document.getElementById('slider-' + couponId);
@@ -367,7 +390,7 @@
             if (!el || !dotsBox || !el.clientWidth) return;
             const activeIdx = Math.min(total - 1, Math.max(0, Math.round(el.scrollLeft / el.clientWidth)));
             Array.from(dotsBox.children).forEach((dot, idx) => {
-                dot.className = `w-1.5 h-1.5 rounded-full transition ${idx === activeIdx ? 'bg-white scale-125' : 'bg-white/50'}`;
+                dot.className = `w-1 h-1 md:w-1.5 md:h-1.5 rounded-full transition ${idx === activeIdx ? 'bg-white scale-125' : 'bg-white/55'}`;
             });
         };
 
@@ -552,6 +575,7 @@
             document.getElementById('modalValidUntil').textContent = coupon.valid_until
                 ? `📅 유효기간: ${coupon.valid_until.replace(/-/g, '.')}까지 사용 가능`
                 : '📅 유효기간: 상시 사용 가능';
+            document.getElementById('modalDesc').textContent = coupon.description || '';
             document.getElementById('modalStatus').textContent = '쿠폰 이미지를 준비하고 있습니다...';
 
             const preview = document.getElementById('couponImage');
