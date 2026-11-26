@@ -397,3 +397,535 @@
       });
       storePhotoItems = [];
     }
+
+    function renderStoreImagePreviews() {
+      const box = document.getElementById('cp-store-images-preview');
+      const hint = document.getElementById('cp-store-images-hint');
+      const remain = Math.max(0, 5 - storePhotoItems.length);
+
+      hint.textContent = storePhotoItems.length > 0
+        ? `총 ${storePhotoItems.length}장 선택됨 (추가 가능: ${remain}장) · 1번 사진이 메인 대표 사진으로 노출됩니다.`
+        : '사진을 선택한 뒤 1번(대표 사진)부터 원하는 순서대로 배치해 주세요.';
+
+      box.innerHTML = storePhotoItems.map((item, idx) => {
+        const src = item.type === 'url' ? item.url : item.previewUrl;
+        const label = idx === 0 ? '1·대표' : String(idx + 1);
+        return `
+          <div class="preview-card" draggable="true" data-idx="${idx}">
+            <span class="order-tag ${idx === 0 ? 'first' : ''}">${label}</span>
+            <img src="${escapeHtml(src)}" alt="매장사진 ${idx + 1}">
+            <button type="button" class="del-photo-btn" title="사진 제거" onclick="removeStorePhoto(${idx})">✕</button>
+            <div class="order-controls">
+              <button type="button" title="앞으로 이동" onclick="moveStorePhoto(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>◀</button>
+              <button type="button" title="뒤로 이동" onclick="moveStorePhoto(${idx}, 1)" ${idx === storePhotoItems.length - 1 ? 'disabled' : ''}>▶</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      box.querySelectorAll('.preview-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          dragSourceIndex = Number(card.dataset.idx);
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          box.querySelectorAll('.preview-card').forEach(c => c.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          const targetIndex = Number(card.dataset.idx);
+          if (dragSourceIndex === null || dragSourceIndex === targetIndex) return;
+          const [moved] = storePhotoItems.splice(dragSourceIndex, 1);
+          storePhotoItems.splice(targetIndex, 0, moved);
+          dragSourceIndex = null;
+          renderStoreImagePreviews();
+        });
+      });
+    }
+
+    window.moveStorePhoto = (idx, step) => {
+      const target = idx + step;
+      if (target < 0 || target >= storePhotoItems.length) return;
+      const [moved] = storePhotoItems.splice(idx, 1);
+      storePhotoItems.splice(target, 0, moved);
+      renderStoreImagePreviews();
+    };
+
+    window.removeStorePhoto = (idx) => {
+      const [removed] = storePhotoItems.splice(idx, 1);
+      if (removed && removed.type === 'file' && removed.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      renderStoreImagePreviews();
+    };
+
+    document.getElementById('cp-store-images').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      if (storePhotoItems.length + files.length > 5) {
+        alert(`매장 사진은 최대 5장까지 등록할 수 있습니다. (현재 ${storePhotoItems.length}장 선택됨)`);
+        e.target.value = '';
+        return;
+      }
+
+      files.forEach(file => {
+        storePhotoItems.push({
+          type: 'file',
+          file,
+          previewUrl: URL.createObjectURL(file)
+        });
+      });
+
+      e.target.value = '';
+      renderStoreImagePreviews();
+    });
+
+    function renderCouponImagePreview() {
+      const box = document.getElementById('cp-coupon-image-preview');
+      if (!editingCouponImageUrl) {
+        box.innerHTML = '';
+        return;
+      }
+      box.innerHTML = `
+        <div class="preview-card" style="cursor:default; width:82px;">
+          <img src="${escapeHtml(editingCouponImageUrl)}" alt="쿠폰 이미지">
+          <button type="button" class="del-photo-btn" title="쿠폰 이미지 제거" onclick="removeSavedCouponImage()">✕</button>
+        </div>
+      `;
+    }
+
+    window.removeSavedCouponImage = () => {
+      editingCouponImageUrl = '';
+      document.getElementById('cp-image').value = '';
+      renderCouponImagePreview();
+    };
+
+    function resetEventForm() {
+      editingEventId = null;
+      editingEventImageUrl = '';
+      document.getElementById('event-form').reset();
+      document.getElementById('ev-form-title').textContent = '새 행사 등록';
+      document.getElementById('ev-submit-btn').textContent = '행사 등록하기';
+      document.getElementById('ev-cancel-btn').classList.add('hidden');
+      document.getElementById('ev-image-hint').classList.add('hidden');
+      document.getElementById('ev-image-hint').textContent = '';
+    }
+
+    document.getElementById('ev-cancel-btn').addEventListener('click', () => {
+      resetEventForm();
+      document.getElementById('ev-msg').textContent = '';
+    });
+
+    function resetCouponForm() {
+      editingCouponId = null;
+      clearStorePhotoItems();
+      editingCouponImageUrl = '';
+      document.getElementById('coupon-form').reset();
+      couponTypeSelect.value = 'limited';
+      qtyPreset.value = '50';
+      qtyInput.value = '50';
+      syncCouponTypeUI();
+      renderStoreImagePreviews();
+      renderCouponImagePreview();
+      document.getElementById('cp-form-title').textContent = '새 쿠폰 등록';
+      document.getElementById('cp-submit-btn').textContent = '쿠폰 등록하기';
+      document.getElementById('cp-cancel-btn').classList.add('hidden');
+      document.getElementById('cp-image-hint').textContent = '비워두면 매장명·발급번호가 들어간 기본 쿠폰 이미지가 자동 생성됩니다.';
+    }
+
+    document.getElementById('cp-cancel-btn').addEventListener('click', () => {
+      resetCouponForm();
+      document.getElementById('cp-msg').textContent = '';
+    });
+
+    async function checkAuth() {
+      const { data: { session } } = await sb.auth.getSession();
+      const loggedIn = !!session;
+      document.getElementById('login-section').classList.toggle('hidden', loggedIn);
+      document.getElementById('admin-section').classList.toggle('hidden', !loggedIn);
+      document.getElementById('logout-btn').classList.toggle('hidden', !loggedIn);
+      if (loggedIn) {
+        loadEvents();
+        loadCoupons();
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        document.getElementById('login-msg').textContent = '로그인 실패: ' + error.message;
+      } else {
+        document.getElementById('login-msg').textContent = '';
+        checkAuth();
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      checkAuth();
+    });
+
+    async function loadEvents() {
+      const { data, error } = await sb.from('events').select('*').order('created_at', { ascending: false });
+      const list = document.getElementById('events-list');
+      if (error) return (list.textContent = '불러오기 실패: ' + error.message);
+      if (!data.length) {
+        eventsCache = [];
+        return (list.textContent = '등록된 행사가 없습니다.');
+      }
+
+      eventsCache = data;
+      list.innerHTML = data.map(ev => `
+        <div class="item">
+          ${ev.image_url ? `<img class="thumb" src="${escapeHtml(ev.image_url)}" alt="">` : ''}
+          <div class="item-info">
+            <div><span class="badge">${escapeHtml(ev.category)}</span><strong>${escapeHtml(ev.title)}</strong></div>
+            <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
+              ${escapeHtml(ev.start_date || '미정')} ~ ${escapeHtml(ev.end_date || '미정')} · ${escapeHtml(ev.location || '장소 미정')}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="edit" onclick="editEvent(${ev.id})">수정</button>
+            <button class="danger" onclick="deleteEvent(${ev.id})">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.editEvent = (id) => {
+      const ev = eventsCache.find(item => item.id === id);
+      if (!ev) return;
+
+      editingEventId = ev.id;
+      editingEventImageUrl = ev.image_url || '';
+
+      document.getElementById('ev-category').value = ev.category || '축제';
+      document.getElementById('ev-title').value = ev.title || '';
+      document.getElementById('ev-start').value = ev.start_date || '';
+      document.getElementById('ev-end').value = ev.end_date || '';
+      document.getElementById('ev-location').value = ev.location || '';
+      document.getElementById('ev-desc').value = ev.description || '';
+      document.getElementById('ev-image').value = '';
+
+      document.getElementById('ev-form-title').textContent = `행사 수정 (${ev.title})`;
+      document.getElementById('ev-submit-btn').textContent = '수정 저장하기';
+      document.getElementById('ev-cancel-btn').classList.remove('hidden');
+
+      const hint = document.getElementById('ev-image-hint');
+      hint.textContent = editingEventImageUrl
+        ? '새 파일을 선택하지 않으면 기존 행사 이미지가 그대로 유지됩니다.'
+        : '현재 등록된 이미지가 없습니다. 필요하면 이미지를 선택해 주세요.';
+      hint.classList.remove('hidden');
+
+      document.getElementById('ev-msg').textContent = '';
+      document.getElementById('event-form-card').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    document.getElementById('event-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('ev-msg');
+      msg.textContent = '저장 중...';
+
+      let imageUrl = editingEventId ? editingEventImageUrl : '';
+      const rawFile = document.getElementById('ev-image').files[0];
+
+      if (rawFile) {
+        msg.textContent = '이미지 압축 및 업로드 중...';
+        const file = await compressImage(rawFile, 1000, 0.8);
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await sb.storage.from('events').upload(fileName, file);
+        if (upErr) return (msg.textContent = '이미지 업로드 실패: ' + upErr.message);
+
+        const { data: urlData } = sb.storage.from('events').getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+      }
+
+      const payload = {
+        category: document.getElementById('ev-category').value,
+        title: document.getElementById('ev-title').value.trim(),
+        start_date: document.getElementById('ev-start').value || null,
+        end_date: document.getElementById('ev-end').value || null,
+        location: document.getElementById('ev-location').value.trim(),
+        description: document.getElementById('ev-desc').value.trim(),
+        image_url: imageUrl
+      };
+
+      let error;
+      if (editingEventId) {
+        ({ error } = await sb.from('events').update(payload).eq('id', editingEventId));
+      } else {
+        ({ error } = await sb.from('events').insert([payload]));
+      }
+
+      if (error) return (msg.textContent = '저장 실패: ' + error.message);
+
+      const wasEditing = !!editingEventId;
+      resetEventForm();
+      msg.textContent = wasEditing ? '행사가 수정되었습니다!' : '행사가 등록되었습니다!';
+      loadEvents();
+    });
+
+    window.deleteEvent = async (id) => {
+      if (!confirm('이 행사를 삭제할까요?')) return;
+      const { error } = await sb.from('events').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else {
+        if (editingEventId === id) resetEventForm();
+        loadEvents();
+      }
+    };
+
+    async function loadCoupons() {
+      const { data, error } = await sb.from('coupons').select('*').order('created_at', { ascending: false });
+      const list = document.getElementById('coupons-list');
+      if (error) return (list.textContent = '불러오기 실패: ' + error.message);
+      if (!data.length) {
+        couponsCache = [];
+        return (list.textContent = '등록된 쿠폰이 없습니다.');
+      }
+
+      couponsCache = data;
+      const today = getTodayKst();
+
+      list.innerHTML = data.map(cp => {
+        const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+        const total = hasLimit ? Number(cp.total_quantity) : null;
+        const issued = cp.issued_quantity ?? 0;
+        const remaining = hasLimit ? Math.max(0, total - issued) : null;
+        const isExpired = cp.valid_until && today > cp.valid_until;
+        const validText = cp.valid_until ? `~ ${cp.valid_until}까지` : '상시 사용';
+        const storeImgs = Array.isArray(cp.store_images) && cp.store_images.length > 0
+          ? cp.store_images
+          : (cp.image_url ? [cp.image_url] : []);
+        const thumbUrl = storeImgs[0] || cp.image_url || '';
+
+        const qtyInfo = hasLimit
+          ? `남은 수량: <strong>${remaining}개</strong> / 총 ${total}개`
+          : `수량: <strong>무제한</strong> (발급 ${issued}명)`;
+
+        return `
+          <div class="item">
+            ${thumbUrl ? `<img class="thumb" src="${escapeHtml(thumbUrl)}" alt="">` : ''}
+            <div class="item-info">
+              <div>
+                <span class="badge">${escapeHtml(cp.discount_info)}</span>
+                ${hasLimit ? '<span class="badge">한정수량</span>' : '<span class="badge badge-unlimited">수량 무제한</span>'}
+                ${isExpired ? `<span class="badge badge-expired">기간 만료</span>` : ''}
+                <strong>${escapeHtml(cp.store_name)}</strong>
+              </div>
+              <div style="font-size:13px;color:#7a6c5d;margin-top:4px;">
+                ${qtyInfo} · 유효기간: <strong>${escapeHtml(validText)}</strong> · 매장사진 ${storeImgs.length}장 ${cp.image_url ? '· 쿠폰이미지 등록됨' : ''}
+              </div>
+              ${cp.description ? `<div style="font-size:12px;color:#8d7f70;margin-top:2px;">${escapeHtml(cp.description)}</div>` : ''}
+            </div>
+            <div class="actions">
+              <button class="edit" onclick="editCoupon(${cp.id})">수정</button>
+              <button class="danger" onclick="deleteCoupon(${cp.id})">삭제</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.editCoupon = (id) => {
+      const cp = couponsCache.find(item => item.id === id);
+      if (!cp) return;
+
+      editingCouponId = cp.id;
+      clearStorePhotoItems();
+      const urls = Array.isArray(cp.store_images) ? cp.store_images : [];
+      urls.forEach(url => storePhotoItems.push({ type: 'url', url }));
+      editingCouponImageUrl = cp.image_url || '';
+
+      const hasLimit = cp.total_quantity !== null && cp.total_quantity !== undefined;
+      couponTypeSelect.value = hasLimit ? 'limited' : 'unlimited';
+      syncCouponTypeUI();
+
+      if (hasLimit) {
+        const qtyVal = String(cp.total_quantity);
+        qtyInput.value = qtyVal;
+        qtyPreset.value = ['10', '30', '50', '100'].includes(qtyVal) ? qtyVal : 'custom';
+      }
+
+      document.getElementById('cp-store').value = cp.store_name || '';
+      document.getElementById('cp-discount').value = cp.discount_info || '';
+      document.getElementById('cp-valid-until').value = cp.valid_until || '';
+      document.getElementById('cp-desc').value = cp.description || '';
+      document.getElementById('cp-store-images').value = '';
+      document.getElementById('cp-image').value = '';
+
+      renderStoreImagePreviews();
+      renderCouponImagePreview();
+
+      document.getElementById('cp-form-title').textContent = `쿠폰 수정 (${cp.store_name})`;
+      document.getElementById('cp-submit-btn').textContent = '수정 저장하기';
+      document.getElementById('cp-cancel-btn').classList.remove('hidden');
+
+      document.getElementById('cp-image-hint').textContent = editingCouponImageUrl
+        ? '새 파일을 선택하지 않으면 기존 쿠폰 이미지가 유지됩니다. (위 X 버튼으로 삭제 가능)'
+        : '등록된 쿠폰 이미지가 없습니다. 필요하면 선택해 주세요.';
+
+      document.getElementById('cp-msg').textContent = '';
+      document.getElementById('coupon-form-card').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    async function uploadToCouponsBucket(rawFile, prefix) {
+      const file = await compressImage(rawFile, 1000, 0.8);
+      const ext = file.name.split('.').pop();
+      const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from('coupons').upload(fileName, file);
+      if (error) throw error;
+      const { data } = sb.storage.from('coupons').getPublicUrl(fileName);
+      return data.publicUrl;
+    }
+
+    document.getElementById('coupon-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('cp-msg');
+      msg.textContent = '이미지 압축 및 저장 중...';
+
+      try {
+        const finalStoreImages = [];
+        for (const item of storePhotoItems.slice(0, 5)) {
+          if (item.type === 'url') {
+            finalStoreImages.push(item.url);
+          } else if (item.type === 'file') {
+            const url = await uploadToCouponsBucket(item.file, 'store');
+            finalStoreImages.push(url);
+          }
+        }
+
+        let couponImageUrl = editingCouponImageUrl;
+        const couponFile = document.getElementById('cp-image').files[0];
+        if (couponFile) {
+          couponImageUrl = await uploadToCouponsBucket(couponFile, 'coupon');
+        }
+
+        const isLimited = couponTypeSelect.value === 'limited';
+        const totalQty = isLimited ? Math.max(1, parseInt(qtyInput.value, 10) || 50) : null;
+        const validUntil = document.getElementById('cp-valid-until').value || null;
+
+        const payload = {
+          store_name: document.getElementById('cp-store').value.trim(),
+          discount_info: document.getElementById('cp-discount').value.trim(),
+          description: document.getElementById('cp-desc').value.trim(),
+          store_images: finalStoreImages,
+          image_url: couponImageUrl,
+          total_quantity: totalQty,
+          valid_until: validUntil
+        };
+
+        let error;
+        if (editingCouponId) {
+          ({ error } = await sb.from('coupons').update(payload).eq('id', editingCouponId));
+        } else {
+          payload.issued_quantity = 0;
+          ({ error } = await sb.from('coupons').insert([payload]));
+        }
+
+        if (error) throw error;
+
+        const wasEditing = !!editingCouponId;
+        resetCouponForm();
+        msg.textContent = wasEditing ? '쿠폰이 수정되었습니다!' : '쿠폰이 등록되었습니다!';
+        loadCoupons();
+      } catch (err) {
+        msg.textContent = '저장 실패: ' + (err.message || err);
+      }
+    });
+
+    window.deleteCoupon = async (id) => {
+      if (!confirm('이 쿠폰을 삭제할까요?')) return;
+      const { error } = await sb.from('coupons').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else {
+        if (editingCouponId === id) resetCouponForm();
+        loadCoupons();
+      }
+    };
+
+    // 자유게시판 글 & 댓글 통합 관리
+    window.loadAdminPosts = async () => {
+      const box = document.getElementById('admin-posts-list');
+      const { data, error } = await sb
+        .from('board_posts')
+        .select('*, board_comments(id, nickname, content, created_at)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) return (box.textContent = '불러오기 실패: ' + error.message);
+      if (!data.length) return (box.textContent = '등록된 게시글이 없습니다.');
+
+      box.innerHTML = data.map(p => {
+        const comments = (p.board_comments || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        return `
+          <div class="post-block">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div class="item-info">
+                <div>
+                  <span class="badge">${escapeHtml(p.category)}</span>
+                  <strong>${escapeHtml(p.title)}</strong>
+                  <span style="font-size:12px;color:#8c5230;font-weight:700;margin-left:4px;">(${comments.length})</span>
+                </div>
+                <div style="font-size:12px;color:#7a6c5d;margin-top:4px;">
+                  작성자: ${escapeHtml(p.nickname)} · ${new Date(p.created_at).toLocaleString('ko-KR')}
+                </div>
+              </div>
+              <div class="actions">
+                <button class="danger" onclick="deleteAdminPost(${p.id})">글 삭제</button>
+              </div>
+            </div>
+
+            ${comments.length > 0 ? `
+              <div class="admin-cmt-list">
+                ${comments.map(c => `
+                  <div class="admin-cmt-row">
+                    <div style="min-width:0; flex:1;">
+                      <strong>💬 ${escapeHtml(c.nickname)}</strong>
+                      <span style="color:#7a6c5d; margin-left:6px;">${new Date(c.created_at).toLocaleString('ko-KR')}</span>
+                      <div style="margin-top:3px; color:#2f261f; word-break:break-word;">${escapeHtml(c.content)}</div>
+                    </div>
+                    <button class="danger" style="padding:4px 9px; font-size:11px;" onclick="deleteAdminComment(${c.id})">댓글 삭제</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    };
+
+    window.deleteAdminPost = async (id) => {
+      if (!confirm('이 게시글과 댓글을 모두 삭제할까요?')) return;
+      const { error } = await sb.from('board_posts').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else loadAdminPosts();
+    };
+
+    window.deleteAdminComment = async (id) => {
+      if (!confirm('이 댓글을 삭제할까요?')) return;
+      const { error } = await sb.from('board_comments').delete().eq('id', id);
+      if (error) alert('삭제 실패: ' + error.message);
+      else loadAdminPosts();
+    };
+
+    syncCouponTypeUI();
+    checkAuth();
+  </script>
+</body>
+</html>
