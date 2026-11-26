@@ -121,7 +121,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">사진 첨부 (선택)</label>
+                    <label class="block text-xs font-semibold text-[#7a6c5d] mb-1">사진 첨부 (선택 · 자동 용량 최적화)</label>
                     <input type="file" id="postImage" accept="image/*" class="w-full bg-white border border-[#e6d5c3] rounded-xl px-3 py-2 text-xs">
                 </div>
 
@@ -172,6 +172,47 @@
 
         const esc = (s = '') =>
             String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // 이미지 자동 압축 함수 (최대 가로 1000px, JPEG 품질 0.8)
+        async function compressImage(file, maxWidth = 1000, quality = 0.8) {
+            if (!file || !file.type.startsWith('image/')) return file;
+            if (file.type === 'image/gif') return file;
+
+            return new Promise((resolve) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob || blob.size >= file.size) {
+                            resolve(file);
+                            return;
+                        }
+                        const baseName = file.name.replace(/\.[^/.]+$/, '');
+                        resolve(new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' }));
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(file);
+                };
+                img.src = url;
+            });
+        }
 
         function formatDate(isoStr) {
             if (!isoStr) return '';
@@ -315,8 +356,10 @@
 
             try {
                 let imageUrl = null;
-                const file = document.getElementById('postImage').files[0];
-                if (file) {
+                const rawFile = document.getElementById('postImage').files[0];
+                if (rawFile) {
+                    btn.textContent = '사진 압축 및 업로드 중...';
+                    const file = await compressImage(rawFile, 1000, 0.8);
                     const ext = file.name.split('.').pop();
                     const fileName = `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
                     const { error: upErr } = await sb.storage.from('board').upload(fileName, file);
@@ -344,7 +387,11 @@
                 await loadPosts();
             } catch (err) {
                 console.error(err);
-                alert('글 등록에 실패했습니다: ' + (err.message || err));
+                if (err.message && err.message.includes('row-level security')) {
+                    alert('욕설이나 외부 광고 링크가 포함된 글은 등록할 수 없습니다.');
+                } else {
+                    alert('글 등록에 실패했습니다: ' + (err.message || err));
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = '등록하기';
@@ -461,7 +508,11 @@
                 document.getElementById('commentContent').value = '';
                 await loadComments(activePostId);
             } catch (err) {
-                alert('댓글 등록 실패: ' + (err.message || err));
+                if (err.message && err.message.includes('row-level security')) {
+                    alert('욕설이나 외부 광고 링크가 포함된 댓글은 등록할 수 없습니다.');
+                } else {
+                    alert('댓글 등록 실패: ' + (err.message || err));
+                }
             } finally {
                 btn.disabled = false;
             }
