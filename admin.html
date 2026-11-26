@@ -31,6 +31,10 @@
     }
     textarea { resize: vertical; min-height: 80px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) {
+      .row, .row-3 { grid-template-columns: 1fr; }
+    }
     .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
     .btn-row button { margin-top: 0; }
     button {
@@ -54,6 +58,9 @@
     .badge {
       display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
       background: #f3e8dc; color: var(--accent); font-weight: 700; margin-right: 6px;
+    }
+    .badge-cat {
+      background: #efe7dd; color: #4a3b2c;
     }
     .badge-unlimited {
       background: #e8f3ec; color: #1f6f43;
@@ -195,7 +202,16 @@
         <div class="card" id="coupon-form-card">
           <h2 id="cp-form-title">새 쿠폰 등록</h2>
           <form id="coupon-form">
-            <div class="row">
+            <div class="row-3">
+              <div>
+                <label>카테고리 *</label>
+                <select id="cp-category" required>
+                  <option value="맛집">맛집</option>
+                  <option value="카페·디저트">카페·디저트</option>
+                  <option value="숙소">숙소</option>
+                  <option value="체험·쇼핑">체험·쇼핑</option>
+                </select>
+              </div>
               <div>
                 <label>매장명 *</label>
                 <input type="text" id="cp-store" required placeholder="예: 황남비빔밥" />
@@ -532,6 +548,7 @@
       clearStorePhotoItems();
       editingCouponImageUrl = '';
       document.getElementById('coupon-form').reset();
+      document.getElementById('cp-category').value = '맛집';
       couponTypeSelect.value = 'limited';
       qtyPreset.value = '50';
       qtyInput.value = '50';
@@ -723,6 +740,7 @@
             ${thumbUrl ? `<img class="thumb" src="${escapeHtml(thumbUrl)}" alt="">` : ''}
             <div class="item-info">
               <div>
+                <span class="badge badge-cat">${escapeHtml(cp.category || '맛집')}</span>
                 <span class="badge">${escapeHtml(cp.discount_info)}</span>
                 ${hasLimit ? '<span class="badge">한정수량</span>' : '<span class="badge badge-unlimited">수량 무제한</span>'}
                 ${isExpired ? `<span class="badge badge-expired">기간 만료</span>` : ''}
@@ -762,6 +780,7 @@
         qtyPreset.value = ['10', '30', '50', '100'].includes(qtyVal) ? qtyVal : 'custom';
       }
 
+      document.getElementById('cp-category').value = cp.category || '맛집';
       document.getElementById('cp-store').value = cp.store_name || '';
       document.getElementById('cp-discount').value = cp.discount_info || '';
       document.getElementById('cp-valid-until').value = cp.valid_until || '';
@@ -821,6 +840,7 @@
         const validUntil = document.getElementById('cp-valid-until').value || null;
 
         const payload = {
+          category: document.getElementById('cp-category').value,
           store_name: document.getElementById('cp-store').value.trim(),
           discount_info: document.getElementById('cp-discount').value.trim(),
           description: document.getElementById('cp-desc').value.trim(),
